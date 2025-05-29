@@ -267,6 +267,9 @@ elif page == "집 장만 시뮬레이션":
         else:
             monthly_payment = 0
         st.write(f"📅 Monthly Loan Repayment: **{monthly_payment/10000:,.1f} **")
+        # 이 부분 추가!
+        st.session_state['last_housing_payment'] = int(monthly_payment/10000)
+
         years = np.arange(1, period+1)
         house_up = [house_price * ((1 + up_rate/100) ** i) for i in years]
         house_dn = [house_price * ((1 + dn_rate/100) ** i) for i in years]
@@ -317,7 +320,7 @@ elif page == "집 장만 시뮬레이션":
         #### ⚖️ Jeonse = Deposit + Cash
         - No risk of loss/leverage/price change.
         """)
-
+    	st.session_state['last_housing_payment'] = 0
 # ---- 세번째 페이지 ----
 elif page == "예상 가계부 시뮬레이션":
     st.title("📝 Expected Budget Simulation")
@@ -475,7 +478,6 @@ elif page == "예상 가계부 시뮬레이션":
     st.session_state['expense_df'] = df
 
     # ---- 연도별 선택 ----
-    checked = st.multiselect("확인하고 싶은 연도를 모두 선택하세요.", year_labels, default=[year_labels[0]])
 
     # 아래는 그래프 부분만 예시
     color_map = ["#5B9BD5", "#ED7D31", "#A9D18E", "#FFD966"]
