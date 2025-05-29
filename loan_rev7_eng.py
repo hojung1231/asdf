@@ -118,12 +118,12 @@ if page == "월별 실수령액 시뮬레이션":
     st.markdown("#### Husband Parental Leave")
     colh1, colh2, colh3 = st.columns(3)
     with colh1:
-        # 값 기억용! (years에 값이 없으면 첫 번째로)
         saved_value = st.session_state.get("hy_start_year", years[0])
         idx = years.index(saved_value) if saved_value in years else 0
         hy_start_year = st.selectbox("Husband Leave Start Year", years, index=idx, key="hy_start_year")
-        # 선택값 유지
-        st.session_state["hy_start_year"] = hy_start_year
+        # 이 아래 줄 완전히 삭제!
+        # st.session_state["hy_start_year"] = hy_start_year
+
 
     with colh2:
         saved_month = st.session_state.get("hy_start_month", 1)
@@ -139,7 +139,8 @@ if page == "월별 실수령액 시뮬레이션":
         saved_value = st.session_state.get("wy_start_year", years[0])
         idx = years.index(saved_value) if saved_value in years else 0
         wy_start_year = st.selectbox("Wife Leave Start Year", years, index=idx, key="wy_start_year")
-        st.session_state["wy_start_year"] = wy_start_year
+        # st.session_state["wy_start_year"] = wy_start_year  ← 이 줄 삭제!
+
 
     with colw2:
         saved_month = st.session_state.get("wy_start_month", 1)
