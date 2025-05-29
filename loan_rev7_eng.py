@@ -232,8 +232,8 @@ if page == "월별 실수령액 시뮬레이션":
                 ax.bar(df["M"], df["Husband Net"], label="Husband", color="#5B9BD5")
                 ax.bar(df["M"], df["Wife Net"], label="Wife", bottom=df["Husband Net"], color="#ED7D31")
                 for i, total in enumerate(df["Total"]):
-                    ax.text(i, total + 2, f"{int(total):,} x10k KRW", ha='center', va='bottom', fontsize=6, fontweight='bold')
-                ax.set_ylabel("Monthly Net Salary (x10k KRW)")
+                    ax.text(i, total + 2, f"{int(total):,} ", ha='center', va='bottom', fontsize=6, fontweight='bold')
+                ax.set_ylabel("Monthly Net Salary ")
                 ax.set_xlabel("M")
                 ax.set_title(f"{label}Y Couple Monthly Net Income (Stacked, Parental Leave Applied)")
                 ax.legend()
@@ -245,10 +245,10 @@ elif page == "집 장만 시뮬레이션":
     house_mode = st.radio("Housing Option", ["Purchase", "Jeonse"], key="house_mode")
     if house_mode == "Purchase":
         st.subheader("🏡 Purchase Conditions")
-        cash = st.number_input("Cash (x10k KRW)", min_value=0, value=get_or_set("house_cash", 30000), step=100, key="house_cash")
-        house_price = st.number_input("Purchase Price (x10k KRW)", min_value=0, value=get_or_set("house_price", 70000), step=500, key="house_price")
+        cash = st.number_input("Cash ", min_value=0, value=get_or_set("house_cash", 30000), step=100, key="house_cash")
+        house_price = st.number_input("Purchase Price ", min_value=0, value=get_or_set("house_price", 70000), step=500, key="house_price")
         need_loan = max(house_price - cash, 0)
-        st.write(f"💡 Loan Needed: **{need_loan:,} x10k KRW**")
+        st.write(f"💡 Loan Needed: **{need_loan:,} **")
         loan_year = st.slider("Loan Term (Y)", min_value=10, max_value=40, value=get_or_set("loan_year", 30), key="loan_year")
         loan_rate = st.slider("Interest Rate (%)", min_value=2.0, max_value=8.0, value=get_or_set("loan_rate", 3.8), step=0.1, key="loan_rate")
         st.caption("※ 2024 typical rate: 3.5~4.5%")
@@ -266,7 +266,7 @@ elif page == "집 장만 시뮬레이션":
             monthly_payment = int(monthly_payment // 10) * 10
         else:
             monthly_payment = 0
-        st.write(f"📅 Monthly Loan Repayment: **{monthly_payment/10000:,.1f} x10k KRW**")
+        st.write(f"📅 Monthly Loan Repayment: **{monthly_payment/10000:,.1f} **")
         years = np.arange(1, period+1)
         house_up = [house_price * ((1 + up_rate/100) ** i) for i in years]
         house_dn = [house_price * ((1 + dn_rate/100) ** i) for i in years]
@@ -299,7 +299,7 @@ elif page == "집 장만 시뮬레이션":
         ax.plot(df["Y"], df["Net Assets (Up)"], marker='o', label="Net Assets (Up)")
         ax.plot(df["Y"], df["Net Assets (Down)"], marker='o', label="Net Assets (Down)")
         ax.set_xlabel("Y")
-        ax.set_ylabel("Net Assets (x10k KRW)")
+        ax.set_ylabel("Net Assets ")
         ax.set_title("Net Assets Scenario (Buy House)")
         ax.legend()
         st.pyplot(fig)
@@ -310,8 +310,8 @@ elif page == "집 장만 시뮬레이션":
         """)
     elif house_mode == "Jeonse":
         st.subheader("🏡 Jeonse Conditions")
-        deposit = st.number_input("Deposit (x10k KRW)", min_value=0, value=get_or_set("jeonse_deposit", 40000), step=500, key="jeonse_deposit")
-        cash = st.number_input("Cash (x10k KRW)", min_value=0, value=get_or_set("jeonse_cash", 30000), step=100, key="jeonse_cash")
+        deposit = st.number_input("Deposit ", min_value=0, value=get_or_set("jeonse_deposit", 40000), step=500, key="jeonse_deposit")
+        cash = st.number_input("Cash ", min_value=0, value=get_or_set("jeonse_cash", 30000), step=100, key="jeonse_cash")
         st.info(f"Deposit {deposit:,} x10k, Cash {cash:,} x10k")
         st.markdown("""
         #### ⚖️ Jeonse = Deposit + Cash
@@ -472,6 +472,8 @@ elif page == "예상 가계부 시뮬레이션":
         "합계": total_arr
     })
 
+    st.session_state['expense_df'] = df
+
     # ---- 연도별 선택 ----
     checked = st.multiselect("확인하고 싶은 연도를 모두 선택하세요.", year_labels, default=[year_labels[0]])
 
@@ -496,10 +498,10 @@ elif page == "예상 가계부 시뮬레이션":
         b3 = ax.bar(x, df_year["육아비합"], bottom=df_year["고정비합"]+df_year["변동비합"], label="Childcare", color=color_map[2])
         b4 = ax.bar(x, df_year["주거비합"], bottom=df_year["고정비합"]+df_year["변동비합"]+df_year["육아비합"], label="Housing", color=color_map[3])
         for i, total in enumerate(df_year["합계"]):
-            ax.text(i, total + 2, f"{int(total):,} x10k KRW", ha='center', va='bottom', fontsize=6, fontweight='bold')
+            ax.text(i, total + 2, f"{int(total):,} ", ha='center', va='bottom', fontsize=6, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels([f"M{i+1}" for i in range(12)])  # x라벨 M으로!
-        ax.set_ylabel("Monthly Expenses (x10k KRW)")
+        ax.set_ylabel("Monthly Expenses ")
         ax.set_xlabel("M")
         ax.set_title(f"{year}Y Monthly Expenses (Stacked, Inflation Applied)")
         ax.legend()
@@ -546,7 +548,7 @@ elif page == "통합 자금흐름/잔액 분석":
             ax.bar(x + offset, net_annual, width, label="Net (Savable)", color="#A9D18E")
         ax.set_xticks(x + width)
         ax.set_xticklabels(year_labels, fontsize=10, rotation=45)
-        ax.set_ylabel("Annual Amount (x10k KRW)")
+        ax.set_ylabel("Annual Amount ")
         ax.set_xlabel("Y")
         ax.set_title("Annual Income / Expense / Net Savings")
         ax.legend()
@@ -588,7 +590,7 @@ elif page == "통합 자금흐름/잔액 분석":
         ax.set_xticks(x + width)
         step = max(1, len(sel_month_labels)//20)
         ax.set_xticklabels([sel_month_labels[i] if i%step==0 else "" for i in range(len(sel_month_labels))], rotation=45, fontsize=8)
-        ax.set_ylabel("Monthly Amount (x10k KRW)")
+        ax.set_ylabel("Monthly Amount ")
         ax.set_xlabel("Y, M")
         ax.set_title(f"{sel_start_year}Y~{sel_start_year+sel_period-1}Y Monthly Income / Expense / Net Savings")
         if label_shown:
@@ -602,7 +604,7 @@ elif page == "통합 자금흐름/잔액 분석":
         ax2.axhline(0, color="gray", linestyle="--", linewidth=1)
         ax2.set_xticks(x)
         ax2.set_xticklabels([sel_month_labels[i] if i%step==0 else "" for i in range(len(sel_month_labels))], rotation=45, fontsize=8)
-        ax2.set_ylabel("Cumulative Cash Flow (x10k KRW)")
+        ax2.set_ylabel("Cumulative Cash Flow ")
         ax2.set_xlabel("Y, M")
         ax2.set_title("Cumulative Net Cash Flow (Monthly Net Savings)")
         st.pyplot(fig2)
