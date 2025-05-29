@@ -340,11 +340,23 @@ elif page == "예상 가계부 시뮬레이션":
         st.markdown(f"##### Child {i+1} Birth")
         colc1, colc2 = st.columns(2)
         with colc1:
-            y = st.number_input(f"Child {i+1} Birth Year", min_value=2024, max_value=2050, value=get_or_set(f"childy_{i}", 2025), key=f"childy_{i}")
+            y = st.number_input(
+                f"Child {i+1} Birth Year",
+                min_value=2024, max_value=2050,
+                value=get_or_set(f"childy_{i}", 2025),
+                key=f"childy_{i}"
+            )
         with colc2:
-            m = st.selectbox(f"Child {i+1} Birth Month", list(range(1, 13)), index=get_or_set(f"childm_{i}", 0), key=f"childm_{i}")
-        child_plan.append((y, m+1))  # m: 0-indexed
-
+            # 아래 부분만 수정
+            saved_month = st.session_state.get(f"childm_{i}", 1)  # 1~12월로 저장됨
+            idx = saved_month - 1 if saved_month in range(1, 13) else 0
+            m = st.selectbox(
+                f"Child {i+1} Birth Month",
+                list(range(1, 13)),
+                index=idx,
+                key=f"childm_{i}"
+            )
+        child_plan.append((y, m))
     # ... 이하 get_childcare_cost 등 함수 및 예시 생략 (기존 코드 복사)
     st.caption("""
     ※ 육아비(자녀 1인 기준):  
