@@ -320,7 +320,7 @@ elif page == "집 장만 시뮬레이션":
         #### ⚖️ Jeonse = Deposit + Cash
         - No risk of loss/leverage/price change.
         """)
-    	st.session_state['last_housing_payment'] = 0
+        st.session_state['last_housing_payment'] = 0
 # ---- 세번째 페이지 ----
 elif page == "예상 가계부 시뮬레이션":
     st.title("📝 Expected Budget Simulation")
