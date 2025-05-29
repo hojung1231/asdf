@@ -129,7 +129,7 @@ if page == "월별 실수령액 시뮬레이션":
         saved_month = st.session_state.get("hy_start_month", 1)
         idx = list(range(1, 13)).index(saved_month) if saved_month in range(1, 13) else 0
         hy_start_month = st.selectbox("Husband Leave Start Month", list(range(1, 13)), index=idx, key="hy_start_month")
-        st.session_state["hy_start_month"] = hy_start_month
+        #st.session_state["hy_start_month"] = hy_start_month
 
     with colh3:
         hy_months = st.number_input("Husband Leave Months", min_value=0, max_value=36, value=get_or_set("hy_months", 0), key="hy_months")
@@ -146,7 +146,7 @@ if page == "월별 실수령액 시뮬레이션":
         saved_month = st.session_state.get("wy_start_month", 1)
         idx = list(range(1, 13)).index(saved_month) if saved_month in range(1, 13) else 0
         wy_start_month = st.selectbox("Wife Leave Start Month", list(range(1, 13)), index=idx, key="wy_start_month")
-        st.session_state["wy_start_month"] = wy_start_month
+        #st.session_state["wy_start_month"] = wy_start_month
 
     with colw3:
         wy_months = st.number_input("Wife Leave Months", min_value=0, max_value=36, value=get_or_set("wy_months", 0), key="wy_months")
