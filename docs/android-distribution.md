@@ -6,6 +6,7 @@ harmful-app classifications are distinct. A successful build or signature check 
 
 Starting with 2.3.1, public APKs use the non-debuggable release build, tested in both build variants.
 The CI job verifies the permanent signing certificate and an explicit merged-APK permission allowlist.
+The app targets API 35 and applies system-bar, display-cutout and keyboard insets on Android 15+.
 The package ID and certificate remain unchanged so existing records and device accounts survive updates.
 
 The only Android system permissions requested are Internet, network state, boot completed and package

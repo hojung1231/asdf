@@ -8,7 +8,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import org.json.JSONArray;
 
-public class RecordHistoryActivity extends Activity {
+public class RecordHistoryActivity extends BaseActivity {
     private ListView list;
     private JSONArray points;
 

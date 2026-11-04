@@ -132,4 +132,23 @@ public class LayoutTest {
             for (int i = 0; i < group.getChildCount(); i++) collectButtons(group.getChildAt(i), actions);
         }
     }
+
+    @Test @Config(sdk = 35) public void android15KeepsContentOutsideBarsAndKeyboard() {
+        try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
+            MainActivity activity = controller.get();
+            View content = activity.findViewById(android.R.id.content);
+            android.view.WindowInsets insets = new android.view.WindowInsets.Builder()
+                    .setInsets(android.view.WindowInsets.Type.statusBars(), android.graphics.Insets.of(0, 24, 0, 0))
+                    .setInsets(android.view.WindowInsets.Type.navigationBars(), android.graphics.Insets.of(0, 0, 0, 32))
+                    .setInsets(android.view.WindowInsets.Type.ime(), android.graphics.Insets.of(0, 0, 0, 200))
+                    .build();
+            content.dispatchApplyWindowInsets(insets);
+            assertEquals(24, content.getPaddingTop());
+            assertEquals(200, content.getPaddingBottom());
+            android.view.WindowInsets closed = new android.view.WindowInsets.Builder(insets)
+                    .setInsets(android.view.WindowInsets.Type.ime(), android.graphics.Insets.NONE).build();
+            content.dispatchApplyWindowInsets(closed);
+            assertEquals(32, content.getPaddingBottom());
+        }
+    }
 }

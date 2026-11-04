@@ -24,7 +24,7 @@ android {
         buildConfigField 'String', 'SUPABASE_KEY', groovy.json.JsonOutput.toJson(System.getenv('HUGGY_SUPABASE_KEY') ?: '')
         applicationId 'com.hunger.log'
         minSdk 23
-        targetSdk 32
+        targetSdk 35
         versionCode 19
         versionName '2.3.1'
     }

@@ -13,7 +13,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class MainActivity extends Activity {
+public class MainActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final java.util.Map<String, PersonColumn> columns = new java.util.LinkedHashMap<>();
     private LinearLayout people;

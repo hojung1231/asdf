@@ -9,7 +9,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class UpdateActivity extends Activity {
+public class UpdateActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView status;
     private Button action;

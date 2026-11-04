@@ -9,7 +9,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class WeightActivity extends Activity {
+public class WeightActivity extends BaseActivity {
     private final java.util.Calendar date = java.util.Calendar.getInstance();
     private Button dateButton;
     private EditText input;

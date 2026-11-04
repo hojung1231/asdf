@@ -11,7 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import org.json.JSONObject;
 
-public class AccountActivity extends Activity {
+public class AccountActivity extends BaseActivity {
     private LinearLayout layout;
     private TextView message;
     private boolean busy;

@@ -9,7 +9,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class DailyHistoryActivity extends Activity {
+public class DailyHistoryActivity extends BaseActivity {
     private final java.util.Calendar month = java.util.Calendar.getInstance();
     private TextView heading;
     private LinearLayout rows;

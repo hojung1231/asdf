@@ -10,7 +10,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class FriendRequestsActivity extends Activity {
+public class FriendRequestsActivity extends BaseActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LinearLayout rows;
     private TextView status;
