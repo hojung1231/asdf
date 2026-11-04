@@ -89,7 +89,7 @@ final class WidgetPlot {
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         int last = points.length() - 1;
-        float destinationX = 14 + x(points, first, last, width - 28);
+        float destinationX = 14 + x(points, first, last, Math.max(80, Math.round((width - 28) * 1.65f / 2.65f)));
         float destinationY = 84 + y(points.optJSONArray(last).optDouble(1), height - 314);
         if (progress < 1) {
             float originX = 14 + (width - 28) * (selected / 3 == 0 ? 0.25f : 0.75f);

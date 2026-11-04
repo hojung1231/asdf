@@ -13,17 +13,49 @@ public class HomeWidget extends AppWidgetProvider {
 
     private static final android.os.Handler FRAMES = new android.os.Handler(android.os.Looper.getMainLooper());
 
+    private static final String DEMO_TICK = "com.hunger.log.DEMO_TICK";
+
+    private static PendingIntent demoIntent(Context context) {
+        return PendingIntent.getBroadcast(context, 100,
+                new Intent(context, HomeWidget.class).setAction(DEMO_TICK),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    private static void scheduleDemo(Context context) {
+        android.app.AlarmManager alarms = (android.app.AlarmManager)
+                context.getSystemService(Context.ALARM_SERVICE);
+        alarms.setInexactRepeating(android.app.AlarmManager.ELAPSED_REALTIME,
+                android.os.SystemClock.elapsedRealtime() + DemoFriends.INTERVAL,
+                DemoFriends.INTERVAL, demoIntent(context));
+    }
+
+    @Override public void onEnabled(Context context) {
+        scheduleDemo(context);
+    }
+
+    @Override public void onDisabled(Context context) {
+        android.app.AlarmManager alarms = (android.app.AlarmManager)
+                context.getSystemService(Context.ALARM_SERVICE);
+        alarms.cancel(demoIntent(context));
+    }
+
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        scheduleDemo(context);
         refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
                                                      int id, android.os.Bundle options) {
+        scheduleDemo(context);
         refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+        if (DEMO_TICK.equals(intent.getAction())) {
+            if (!flying) refresh(context, "HUGGY · 친구 소식 갱신", -1);
+            return;
+        }
         if ("com.hunger.log.RECORD".equals(intent.getAction())) {
             int value = intent.getIntExtra("value", -1);
             if (value >= 0 && value < BUTTONS.length) {
@@ -74,6 +106,11 @@ public class HomeWidget extends AppWidgetProvider {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.widget);
         int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
         org.json.JSONArray points = History.read(context);
+        view.setTextViewText(R.id.friendMessage, DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())));
+        view.setOnClickPendingIntent(R.id.friendPanel, PendingIntent.getActivity(context, 10,
+                new Intent(context, FriendsActivity.class), flags));
+        view.setContentDescription(R.id.friendPanel, "가상 친구 소식. " +
+                DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())) + ". 함께 보기 열기");
         view.setTextViewText(R.id.status, status);
         view.setTextViewText(R.id.score, History.scoreText(points));
         view.setContentDescription(R.id.score, "오늘 기록된 시간 중 2~4단계에 머문 비율. " + History.scoreText(points));
@@ -107,7 +144,7 @@ public class HomeWidget extends AppWidgetProvider {
             int height = size.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
                     : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 350);
             RemoteViews sized = view.clone();
-            sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, Math.max(100, width - 28),
+            sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, Math.max(80, Math.round((width - 28) * 1.65f / 2.65f)),
                     Math.max(50, height - 314), progress));
             sized.setImageViewBitmap(R.id.effect, WidgetPlot.effect(points, width, height, selected, progress));
             for (int i = 0; i < BUTTONS.length; i++) {

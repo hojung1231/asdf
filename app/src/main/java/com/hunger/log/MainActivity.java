@@ -66,6 +66,11 @@ public class MainActivity extends Activity {
         score = new TextView(this);
         score.setTextSize(16);
         layout.addView(score);
+        Button friends = new Button(this);
+        friends.setText("친구들의 허기 상태 · 데모");
+        friends.setOnClickListener(view -> startActivity(
+                new android.content.Intent(this, FriendsActivity.class)));
+        layout.addView(friends);
         LinearLayout periods = new LinearLayout(this);
         layout.addView(periods);
         String[] names = {"하루", "일주일", "한 달"};
