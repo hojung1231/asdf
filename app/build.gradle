@@ -2,6 +2,14 @@ plugins { id 'com.android.application' version '8.7.3' }
 android {
     namespace 'com.hunger.log'
     compileSdk 35
+    signingConfigs {
+        debug {
+            storeFile file(System.getenv('HOME') + '/.android/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     defaultConfig {
         applicationId 'com.hunger.log'
         minSdk 23
