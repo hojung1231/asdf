@@ -9,17 +9,17 @@ import android.content.Intent;
 import android.widget.RemoteViews;
 
 public class HomeWidget extends AppWidgetProvider {
-    private static final int[] BUTTONS = {R.id.b0, R.id.b1, R.id.b2, R.id.b3, R.id.b4};
+    private static final int[] BUTTONS = {R.id.b0, R.id.b1, R.id.b2, R.id.b3, R.id.b4, R.id.b5};
 
     private static final android.os.Handler FRAMES = new android.os.Handler(android.os.Looper.getMainLooper());
 
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        refresh(context, "허기 기록 · 그래프 열기", -1);
+        refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
                                                      int id, android.os.Bundle options) {
-        refresh(context, "허기 기록 · 그래프 열기", -1);
+        refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onReceive(Context context, Intent intent) {

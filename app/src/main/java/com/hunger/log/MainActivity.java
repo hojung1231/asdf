@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
         int padding = (int) (16 * getResources().getDisplayMetrics().density);
         layout.setPadding(padding, padding, padding, padding);
         status = new TextView(this);
-        status.setText("허기 기록 · 목표는 약간 배고픔");
+        status.setText("HUGGY");
         status.setTextSize(18);
         layout.addView(status);
         LinearLayout periods = new LinearLayout(this);
@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
         LinearLayout navigation = new LinearLayout(this);
         layout.addView(navigation);
         control(navigation, "‹ 이전", () -> { offset++; updateRange(); });
-        control(navigation, "현재", () -> { offset = 0; updateRange(); });
+        control(navigation, "현재", () -> { period = 0; offset = 0; updateRange(); });
         control(navigation, "다음 ›", () -> { if (offset > 0) { offset--; updateRange(); } });
         rangeLabel = new TextView(this);
         rangeLabel.setGravity(android.view.Gravity.CENTER);
@@ -82,6 +82,10 @@ public class MainActivity extends Activity {
         layout.addView(legend);
         chart = new Chart();
         layout.addView(chart, new LinearLayout.LayoutParams(-1, 0, 1));
+        LinearLayout choices = new LinearLayout(this);
+        layout.addView(choices);
+        LinearLayout[] columns = {new LinearLayout(this), new LinearLayout(this)};
+        for (LinearLayout column : columns) { column.setOrientation(LinearLayout.VERTICAL); choices.addView(column, new LinearLayout.LayoutParams(0, -2, 1)); }
         for (int i = 0; i < History.LABELS.length; i++) {
             final int value = i;
             Button button = new Button(this);
@@ -95,7 +99,7 @@ public class MainActivity extends Activity {
                 updateRange();
                 if (chart.points.length() > before) chart.pulse();
             });
-            layout.addView(button);
+            columns[i / 3].addView(button);
         }
         Button reset = new Button(this);
         reset.setText("기록 초기화");
@@ -139,26 +143,37 @@ public class MainActivity extends Activity {
 
         @Override protected void onDraw(Canvas canvas) {
             float dp = getResources().getDisplayMetrics().density;
-            float left = 88 * dp, right = getWidth() - 16 * dp;
-            float top = 20 * dp, step = Math.max(0, getHeight() - 48 * dp) / 4;
+            float left = 28 * dp, right = getWidth() - 16 * dp;
+            float top = 20 * dp, step = Math.max(0, getHeight() - 48 * dp) / 5;
             if (right <= left || step <= 0) return;
             paint.setTextSize(12 * dp);
             paint.setStrokeWidth(dp);
             paint.setColor(0x3039ad68);
             canvas.drawRect(left, top + 2 * step, right, top + 4 * step + 6 * dp, paint);
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 6; i++) {
                 float y = top + i * step;
                 paint.setColor(0xff223b35);
-                canvas.drawText(History.LABELS[i], 0, y + 4 * dp, paint);
+                canvas.drawText(String.valueOf(6 - i), 0, y + 4 * dp, paint);
                 paint.setColor(i == 3 ? 0xff73ad87 : 0xffdce4e0);
                 canvas.drawLine(left, y, right, y, paint);
             }
             if (points == null || points.length() == 0) return;
             long first = start;
             long last = end;
+            if (period == 0) {
+                boolean found = false;
+                for (int i = 0; i < points.length(); i++) {
+                    long timestamp = points.optJSONArray(i).optLong(0);
+                    if (timestamp >= start && timestamp < end) {
+                        if (!found) first = timestamp;
+                        last = offset == 0 ? System.currentTimeMillis() : timestamp;
+                        found = true;
+                    }
+                }
+            }
             paint.setColor(0xff223b35);
             java.text.DateFormat time = new java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.KOREA);
-            float bottom = top + 4 * step + 21 * dp;
+            float bottom = top + 5 * step + 21 * dp;
             canvas.drawText(time.format(new java.util.Date(first)), left, bottom, paint);
             String end = time.format(new java.util.Date(last));
             if (last != first && right - left > 2 * paint.measureText(end) + 8 * dp) {
@@ -172,18 +187,23 @@ public class MainActivity extends Activity {
                                 float dp, long first, long last, boolean average) {
             int color = average ? 0xff8b4cb6 : 0xff087968;
             float previousX = 0, previousY = 0;
-            double sum = 0;
+            double[] averages = History.averages(points);
             paint.setStrokeWidth(2 * dp);
             boolean previousVisible = false;
             for (int i = 0; i < points.length(); i++) {
                 JSONArray point = points.optJSONArray(i);
                 int value = point.optInt(1);
-                sum += value;
-                if (point.optLong(0) < first || point.optLong(0) >= last) continue;
+
+                if (point.optLong(0) < first || point.optLong(0) > last) continue;
                 float x = left + (right - left) * (point.optLong(0) - first) / Math.max(1, last - first);
-                float y = top + step * (float) (average ? sum / (i + 1) : value);
+                float y = top + step * (float) (average ? averages[i] : value);
                 paint.setColor(color);
-                if (previousVisible) canvas.drawLine(previousX, previousY, x, y, paint);
+                if (previousVisible) {
+                    if (!average && y < previousY) {
+                        canvas.drawLine(previousX, previousY, x, previousY, paint);
+                        canvas.drawLine(x, previousY, x, y, paint);
+                    } else canvas.drawLine(previousX, previousY, x, y, paint);
+                }
                 if (!average && i == points.length() - 1 && pulse > 0) {
                     paint.setAlpha((int) (120 * pulse));
                     canvas.drawCircle(x, y, (5 + 13 * (1 - pulse)) * dp, paint);
