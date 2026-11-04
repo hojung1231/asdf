@@ -112,7 +112,7 @@ public class HomeWidget extends AppWidgetProvider {
             view.setTextViewText(messageIds[i], DemoFriends.feedMessage(tick - 2 + i));
         }
         view.setOnClickPendingIntent(R.id.friendPanel, PendingIntent.getActivity(context, 10,
-                new Intent(context, FriendsActivity.class), flags));
+                new Intent(context, MainActivity.class), flags));
         view.setContentDescription(R.id.friendPanel, "가상 친구 소식. " +
                 DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())) + ". 함께 보기 열기");
         view.setTextViewText(R.id.weight, WeightHistory.todayLabel(context));

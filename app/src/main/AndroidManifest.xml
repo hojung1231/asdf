@@ -5,7 +5,7 @@
   </activity>
   <activity android:name=".WeightActivity" android:exported="false" android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar"/>
   <activity android:name=".DailyHistoryActivity" android:exported="false"/>
-  <activity android:name=".FriendsActivity" android:exported="false"/>
+
   <receiver android:name=".HomeWidget" android:exported="false">
    <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
    <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget"/>

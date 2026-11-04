@@ -39,7 +39,8 @@ final class DemoFriends {
         java.util.Calendar date = java.util.Calendar.getInstance();
         date.setTimeInMillis(day);
         date.set(java.util.Calendar.HOUR_OF_DAY, 20);
-        long last = Math.min(System.currentTimeMillis(), date.getTimeInMillis());
+        long last = day == History.todayStart() ? System.currentTimeMillis()
+                : Math.min(System.currentTimeMillis(), date.getTimeInMillis());
         date.set(java.util.Calendar.HOUR_OF_DAY, 8);
         long first = Math.min(last, date.getTimeInMillis());
         org.json.JSONArray points = new org.json.JSONArray();
