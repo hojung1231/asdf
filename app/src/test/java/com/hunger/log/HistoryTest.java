@@ -14,30 +14,42 @@ public class HistoryTest {
         return points;
     }
 
-    @Test public void firstRecordHasNoDurationScore() {
-        assertEquals(-1, History.todayScore(records(3)));
+    @Test public void emptyHistoryHasNoScore() {
+        assertEquals(-1, History.todayScore(new JSONArray()));
     }
 
-    @Test public void increasingHungerCountsLinearTimeInBand() {
-        assertEquals(40, History.todayScore(records(0, 5)));
+    @Test public void scoreIsLinearBetweenTwoAndFourAndClampedOutside() {
+        assertEquals(100, History.scoreFromAverage(1));
+        assertEquals(100, History.scoreFromAverage(2));
+        assertEquals(75, History.scoreFromAverage(2.5));
+        assertEquals(50, History.scoreFromAverage(3));
+        assertEquals(25, History.scoreFromAverage(3.5));
+        assertEquals(0, History.scoreFromAverage(4));
+        assertEquals(0, History.scoreFromAverage(6));
+    }
+
+    @Test public void scoreUsesDisplayedLevelsRatherThanStoredIndexes() {
+        assertEquals(100, History.todayScore(records(4)));
+        assertEquals(50, History.todayScore(records(3)));
+        assertEquals(0, History.todayScore(records(2)));
+    }
+
+    @Test public void increasingHungerUsesLinearIntegral() {
         assertEquals(2.5, History.averages(records(0, 5))[1], 0.0001);
+        assertEquals(25, History.todayScore(records(0, 5)));
     }
 
     @Test public void mealUsesPreviousValueUntilMealTime() {
-        assertEquals(0, History.todayScore(records(5, 0)));
-        assertEquals(100, History.todayScore(records(3, 0)));
         assertEquals(3, History.averages(records(3, 0))[1], 0.0001);
+        assertEquals(50, History.todayScore(records(3, 0)));
     }
 
-    @Test public void constantValueInsideBandScoresFullDuration() {
-        assertEquals(100, History.todayScore(records(2, 2, 2)));
-        assertEquals(0, History.todayScore(records(1, 1)));
-    }
-
-    @Test public void previousDayDoesNotContributeToTodayScore() {
+    @Test public void averageAndScoreAreWeightedByElapsedTime() {
         JSONArray points = new JSONArray();
-        points.put(new JSONArray().put(History.todayStart() - 600000L).put(3));
-        points.put(new JSONArray().put(History.todayStart() + 600000L).put(3));
-        assertEquals(-1, History.todayScore(points));
+        points.put(new JSONArray().put(1000L).put(2));
+        points.put(new JSONArray().put(61000L).put(4));
+        points.put(new JSONArray().put(181000L).put(4));
+        assertEquals(11.0 / 3, History.averages(points)[2], 0.0001);
+        assertEquals(83, History.todayScore(points));
     }
 }

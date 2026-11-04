@@ -23,31 +23,17 @@ final class History {
         return today.getTimeInMillis();
     }
 
-    // Score only intervals bounded by records. Decreasing fullness is linear,
-    // increasing fullness remains at the previous level until the meal timestamp.
-    static int todayScore(JSONArray points) {
-        long day = todayStart();
-        double total = 0, inside = 0;
-        for (int i = 1; i < points.length(); i++) {
-            JSONArray previous = points.optJSONArray(i - 1);
-            JSONArray current = points.optJSONArray(i);
-            long from = previous.optLong(0), to = current.optLong(0);
-            if (from < day || to <= from) continue;
-            double a = previous.optDouble(1), b = current.optDouble(1);
-            double duration = to - from;
-            total += duration;
-            // Stored index 2..4 corresponds to displayed levels 4..2.
-            if (b <= a) {
-                if (a >= 2 && a <= 4) inside += duration;
-            } else {
-                double low = Math.max(0, (2 - a) / (b - a));
-                double high = Math.min(1, (4 - a) / (b - a));
-                inside += duration * Math.max(0, high - low);
-            }
-        }
-        return total > 0 ? (int) Math.round(100 * inside / total) : -1;
+    static int scoreFromAverage(double average) {
+        return (int) Math.round(Math.max(0, Math.min(100, (4 - average) * 50)));
     }
 
+    static int todayScore(JSONArray points) {
+        if (points.length() == 0) return -1;
+        double[] averages = averages(points);
+        // Stored indexes run from 0 to 5, displayed levels run from 6 to 1.
+        double displayedAverage = 6 - averages[averages.length - 1];
+        return scoreFromAverage(displayedAverage);
+    }
     static String scoreText(JSONArray points) {
         int score = todayScore(points);
         if (score < 0) return "오늘의 허기점수\n😶 기록 중";

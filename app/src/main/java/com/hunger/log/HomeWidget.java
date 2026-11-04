@@ -113,7 +113,7 @@ public class HomeWidget extends AppWidgetProvider {
                 DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())) + ". 함께 보기 열기");
         view.setTextViewText(R.id.status, status);
         view.setTextViewText(R.id.score, History.scoreText(points));
-        view.setContentDescription(R.id.score, "오늘 기록된 시간 중 2~4단계에 머문 비율. " + History.scoreText(points));
+        view.setContentDescription(R.id.score, "현재 누적 평균 기준. 평균 2 이하는 100점, 4 이상은 0점. " + History.scoreText(points));
         double[] averages = History.averages(points);
         view.setTextViewText(R.id.mean, points.length() == 0 ? "누적 평균" : "누적 평균" + (char) 10
                 + String.format(java.util.Locale.KOREA, "%.1f / 6", 6 - averages[averages.length - 1]));
