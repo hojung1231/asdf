@@ -23,6 +23,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      HUGGY_SOCIAL_READY: ${{ secrets.HUGGY_SOCIAL_READY }}
       HUGGY_SUPABASE_URL: ${{ secrets.HUGGY_SUPABASE_URL }}
       HUGGY_SUPABASE_KEY: ${{ secrets.HUGGY_SUPABASE_KEY }}
     steps:
@@ -64,7 +65,7 @@ jobs:
           name: HUGGY
           path: HUGGY-*.apk
       - name: Publish APK download
-        if: env.HUGGY_SUPABASE_URL != '' && env.HUGGY_SUPABASE_KEY != ''
+        if: env.HUGGY_SOCIAL_READY == 'true' && env.HUGGY_SUPABASE_URL != '' && env.HUGGY_SUPABASE_KEY != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
