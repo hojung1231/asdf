@@ -3,9 +3,8 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002
 select public.huggy_update_profile('요한', true);
 select public.huggy_record(2, 1000, 1000, '10000000-0000-0000-0000-000000000001');
 reset role;
--- Save the invite code as a psql variable before testing the authenticated role.
-select friend_code as code from huggy_private.profiles
-where user_id = '00000000-0000-0000-0000-000000000002' gset
+update huggy_private.profiles set friend_code = '0123456789abcdef'
+where user_id = '00000000-0000-0000-0000-000000000002';
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
 select public.huggy_profile();
@@ -18,7 +17,7 @@ do $$ begin
   exception when insufficient_privilege then null;
   end;
 end $$;
-select public.huggy_follow(:'code');
+select public.huggy_follow('0123456789abcdef');
 do $$ declare snapshot jsonb; begin
   snapshot := public.huggy_snapshot();
   if jsonb_array_length(snapshot->'members') <> 2 then raise exception 'Follow did not work'; end if;
