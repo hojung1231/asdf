@@ -18,12 +18,14 @@ final class History {
         JSONArray points = read(context);
         long now = System.currentTimeMillis();
         JSONArray last = points.optJSONArray(points.length() - 1);
-        if (last != null && now - last.optLong(0) < 60_000) {
-            return "✓ 선택됨 · 다음 기록까지 " + Math.max(1, (60_999 - now + last.optLong(0)) / 1000) + "초";
+        boolean revised = last != null && now - last.optLong(0) < 60_000;
+        if (revised) {
+            points.remove(points.length() - 1);
+            now = last.optLong(0);
         }
         points.put(new JSONArray().put(now).put(value));
         boolean saved = context.getSharedPreferences("history", 0).edit()
                 .putString("points", points.toString()).commit();
-        return saved ? "✦ 그래프에 기록 추가" : "저장 실패 · 다시 눌러 주세요";
+        return saved ? (revised ? "✓ 최근 기록 수정" : "✦ 그래프에 기록 추가") : "저장 실패 · 다시 눌러 주세요";
     }
 }

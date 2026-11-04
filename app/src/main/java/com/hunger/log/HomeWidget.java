@@ -17,6 +17,11 @@ public class HomeWidget extends AppWidgetProvider {
         refresh(context, "허기 기록 · 그래프 열기", -1);
     }
 
+    @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+                                                     int id, android.os.Bundle options) {
+        refresh(context, "허기 기록 · 그래프 열기", -1);
+    }
+
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
         if ("com.hunger.log.RECORD".equals(intent.getAction())) {
@@ -68,7 +73,7 @@ public class HomeWidget extends AppWidgetProvider {
     private static void refresh(Context context, String status, int selected, float progress) {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.widget);
         int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
-        view.setImageViewBitmap(R.id.plot, WidgetPlot.draw(History.read(context), status, selected, progress));
+        org.json.JSONArray points = History.read(context);
         view.setContentDescription(R.id.status, status + " · 그래프 열기");
         view.setOnClickPendingIntent(R.id.status, PendingIntent.getActivity(context, 0,
                 new Intent(context, MainActivity.class), flags));
@@ -78,6 +83,20 @@ public class HomeWidget extends AppWidgetProvider {
             click.putExtra("value", i);
             view.setOnClickPendingIntent(BUTTONS[i], PendingIntent.getBroadcast(context, i, click, flags));
         }
-        AppWidgetManager.getInstance(context).updateAppWidget(new ComponentName(context, HomeWidget.class), view);
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        int[] ids = manager.getAppWidgetIds(new ComponentName(context, HomeWidget.class));
+        boolean landscape = context.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        for (int id : ids) {
+            android.os.Bundle size = manager.getAppWidgetOptions(id);
+            int width = size.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
+                    : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
+            int height = size.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
+                    : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 350);
+            float textScale = Math.max(0.65f, Math.min(1.35f, 300f * height / (350f * Math.max(1, width))));
+            RemoteViews sized = view.clone();
+            sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, status, selected, progress, textScale));
+            manager.updateAppWidget(id, sized);
+        }
     }
 }

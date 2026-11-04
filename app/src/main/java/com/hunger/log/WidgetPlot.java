@@ -9,13 +9,14 @@ final class WidgetPlot {
     private static final int MINT = 0xff54ffce;
     private static final int PURPLE = 0xffd395ff;
     private static final int MUTED = 0xffa9b4d0;
-    private static final float LEFT = 18, RIGHT = 282, TOP = 52, STEP = 19;
+    private static final float LEFT = 18, RIGHT = 282, TOP = 49, STEP = 18;
 
-    static Bitmap draw(JSONArray points, String status, int selected, float progress) {
+    static Bitmap draw(JSONArray points, String status, int selected, float progress, float textScale) {
         Bitmap bitmap = Bitmap.createBitmap(450, 525, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         canvas.scale(1.5f, 1.5f);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextScaleX(textScale);
         canvas.drawColor(0xff090b13);
         label(canvas, paint, "허기 기록", 16, 23, 16, MINT);
         label(canvas, paint, "기록", 156, 22, 10, MINT);
@@ -23,6 +24,8 @@ final class WidgetPlot {
         label(canvas, paint, "목표", 248, 22, 10, MUTED);
         paint.setColor(0xff111624);
         canvas.drawRoundRect(10, 34, 290, 141, 12, 12, paint);
+        paint.setColor(0x3054ffce);
+        canvas.drawRoundRect(LEFT, TOP + 2 * STEP, RIGHT, TOP + 4 * STEP + 8, 5, 5, paint);
         for (int level = 0; level < 5; level++) {
             float y = TOP + level * STEP;
             paint.setColor(level == 3 ? 0xff468174 : 0xff263049);
@@ -32,8 +35,8 @@ final class WidgetPlot {
         for (int i = 0; i < History.LABELS.length; i++) {
             float y = 170 + i * 36;
             paint.setColor(i == selected && (progress < 0.26f || progress == 2) ? 0xff17433b : 0xff141a2c);
-            canvas.drawRoundRect(12, y + 3, 288, y + 33, 10, 10, paint);
-            label(canvas, paint, History.LABELS[i], 29, y + 23, 13, i == 3 || i == selected ? MINT : MUTED);
+            canvas.drawRoundRect(12, y + 3, 288, y + 29, 10, 10, paint);
+            label(canvas, paint, History.LABELS[i], 29, y + 21, 13, i == selected && (progress < 0.26f || progress == 2) ? MINT : MUTED);
         }
 
         int count = points.length();
@@ -54,7 +57,7 @@ final class WidgetPlot {
             float y = TOP + value * STEP;
             float average = TOP + STEP * (float) (sum / (i + 1));
             if (i == count - 1 && progress < 1) {
-                float fromY = 188 + selected * 36;
+                float fromY = 186 + selected * 36;
                 for (int tail = 8; tail >= 0; tail--) {
                     float t = Math.max(0, progress - tail * 0.032f);
                     float eased = t * t * (3 - 2 * t);

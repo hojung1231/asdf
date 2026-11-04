@@ -3,6 +3,9 @@ on: [push, workflow_dispatch]
 jobs:
   apk:
     runs-on: ubuntu-24.04
+    concurrency:
+      group: hunger-log-signing
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -12,6 +15,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: hunger-log-signing-v1
+      - name: Prepare signing key
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android -alias androiddebugkey -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          fi
       - run: gradle :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:

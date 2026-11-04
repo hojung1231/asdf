@@ -13,6 +13,43 @@ import org.json.JSONArray;
 public class MainActivity extends Activity {
     private TextView status;
     private Chart chart;
+    private int period;
+    private int offset;
+    private TextView rangeLabel;
+    private long start;
+    private long end;
+
+    private void updateRange() {
+        java.util.Calendar date = java.util.Calendar.getInstance();
+        date.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        date.set(java.util.Calendar.MINUTE, 0);
+        date.set(java.util.Calendar.SECOND, 0);
+        date.set(java.util.Calendar.MILLISECOND, 0);
+        int field = java.util.Calendar.DAY_OF_YEAR;
+        int stride = 1;
+        if (period == 1) {
+            int day = date.get(java.util.Calendar.DAY_OF_WEEK);
+            date.add(field, -((day + 5) % 7));
+            stride = 7;
+        } else if (period == 2) {
+            date.set(java.util.Calendar.DAY_OF_MONTH, 1);
+            field = java.util.Calendar.MONTH;
+        }
+        date.add(field, -offset * stride);
+        start = date.getTimeInMillis();
+        date.add(field, stride);
+        end = date.getTimeInMillis();
+        java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.KOREA);
+        rangeLabel.setText(format.format(new java.util.Date(start)) + " ~ " + format.format(new java.util.Date(end - 1)));
+        chart.reload();
+    }
+
+    private void control(LinearLayout row, String label, Runnable action) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setOnClickListener(view -> action.run());
+        row.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
+    }
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -24,6 +61,27 @@ public class MainActivity extends Activity {
         status.setText("허기 기록 · 목표는 약간 배고픔");
         status.setTextSize(18);
         layout.addView(status);
+        LinearLayout periods = new LinearLayout(this);
+        layout.addView(periods);
+        String[] names = {"하루", "일주일", "한 달"};
+        for (int i = 0; i < names.length; i++) {
+            int mode = i;
+            control(periods, names[i], () -> { period = mode; offset = 0; updateRange(); });
+        }
+        LinearLayout navigation = new LinearLayout(this);
+        layout.addView(navigation);
+        control(navigation, "‹ 이전", () -> { offset++; updateRange(); });
+        control(navigation, "현재", () -> { offset = 0; updateRange(); });
+        control(navigation, "다음 ›", () -> { if (offset > 0) { offset--; updateRange(); } });
+        rangeLabel = new TextView(this);
+        rangeLabel.setGravity(android.view.Gravity.CENTER);
+        layout.addView(rangeLabel);
+        TextView legend = new TextView(this);
+        legend.setText(android.text.Html.fromHtml("<font color='#087968'>● 허기 기록</font>　"
+                + "<font color='#8b4cb6'>● 누적 평균</font>　<font color='#397852'>■ 안전 구간</font>"));
+        layout.addView(legend);
+        chart = new Chart();
+        layout.addView(chart, new LinearLayout.LayoutParams(-1, 0, 1));
         for (int i = 0; i < History.LABELS.length; i++) {
             final int value = i;
             Button button = new Button(this);
@@ -33,22 +91,31 @@ public class MainActivity extends Activity {
                 String result = History.record(this, value);
                 status.setText(result);
                 HomeWidget.refresh(this, result, value);
-                chart.reload();
+                offset = 0;
+                updateRange();
                 if (chart.points.length() > before) chart.pulse();
             });
             layout.addView(button);
         }
-        TextView legend = new TextView(this);
-        legend.setText("● 허기 기록     ● 누적 평균     ┄ 목표\n가로축은 기록 시간");
-        layout.addView(legend);
-        chart = new Chart();
-        layout.addView(chart, new LinearLayout.LayoutParams(-1, 0, 1));
+        Button reset = new Button(this);
+        reset.setText("기록 초기화");
+        reset.setOnClickListener(view -> new android.app.AlertDialog.Builder(this)
+                .setMessage("저장한 허기 기록을 모두 삭제할까요?")
+                .setNegativeButton("취소", null)
+                .setPositiveButton("삭제", (dialog, which) -> {
+                    if (getSharedPreferences("history", 0).edit().remove("points").commit()) {
+                        status.setText("기록 초기화 완료");
+                        updateRange();
+                        HomeWidget.refresh(this, "기록 초기화 완료", -1);
+                    }
+                }).show());
+        layout.addView(reset);
         setContentView(layout);
     }
 
     @Override protected void onResume() {
         super.onResume();
-        chart.reload();
+        updateRange();
         JSONArray last = chart.points.optJSONArray(chart.points.length() - 1);
         if (last != null && System.currentTimeMillis() - last.optLong(0) < 60_000) chart.pulse();
     }
@@ -77,6 +144,8 @@ public class MainActivity extends Activity {
             if (right <= left || step <= 0) return;
             paint.setTextSize(12 * dp);
             paint.setStrokeWidth(dp);
+            paint.setColor(0x3039ad68);
+            canvas.drawRect(left, top + 2 * step, right, top + 4 * step + 6 * dp, paint);
             for (int i = 0; i < 5; i++) {
                 float y = top + i * step;
                 paint.setColor(0xff223b35);
@@ -85,8 +154,8 @@ public class MainActivity extends Activity {
                 canvas.drawLine(left, y, right, y, paint);
             }
             if (points == null || points.length() == 0) return;
-            long first = points.optJSONArray(0).optLong(0);
-            long last = points.optJSONArray(points.length() - 1).optLong(0);
+            long first = start;
+            long last = end;
             paint.setColor(0xff223b35);
             java.text.DateFormat time = new java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.KOREA);
             float bottom = top + 4 * step + 21 * dp;
@@ -105,14 +174,16 @@ public class MainActivity extends Activity {
             float previousX = 0, previousY = 0;
             double sum = 0;
             paint.setStrokeWidth(2 * dp);
+            boolean previousVisible = false;
             for (int i = 0; i < points.length(); i++) {
                 JSONArray point = points.optJSONArray(i);
                 int value = point.optInt(1);
                 sum += value;
+                if (point.optLong(0) < first || point.optLong(0) >= last) continue;
                 float x = left + (right - left) * (point.optLong(0) - first) / Math.max(1, last - first);
                 float y = top + step * (float) (average ? sum / (i + 1) : value);
                 paint.setColor(color);
-                if (i > 0) canvas.drawLine(previousX, previousY, x, y, paint);
+                if (previousVisible) canvas.drawLine(previousX, previousY, x, y, paint);
                 if (!average && i == points.length() - 1 && pulse > 0) {
                     paint.setAlpha((int) (120 * pulse));
                     canvas.drawCircle(x, y, (5 + 13 * (1 - pulse)) * dp, paint);
@@ -123,6 +194,7 @@ public class MainActivity extends Activity {
                     canvas.drawCircle(x, y, 4 * dp, paint);
                     paint.setStyle(Paint.Style.FILL);
                 } else canvas.drawCircle(x, y, 3 * dp, paint);
+                previousVisible = true;
                 previousX = x;
                 previousY = y;
             }
