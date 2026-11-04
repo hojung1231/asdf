@@ -70,6 +70,27 @@ final class History {
         return result;
     }
 
+    static boolean replaceValue(JSONArray points, int index, long time, int value) {
+        if (value < 0 || value >= LABELS.length || index < 0 || index >= points.length()) return false;
+        JSONArray point = points.optJSONArray(index);
+        if (point == null || point.optLong(0) != time) return false;
+        try { point.put(1, value); }
+        catch (org.json.JSONException error) { throw new IllegalStateException(error); }
+        return true;
+    }
+
+    static synchronized boolean edit(Context context, int index, long time, int value) {
+        JSONArray points = read(context);
+        if (!replaceValue(points, index, time, value)) return false;
+        boolean latest = index == points.length() - 1;
+        android.content.SharedPreferences preferences = context.getSharedPreferences("history", 0);
+        android.content.SharedPreferences.Editor editor = preferences.edit().putString("points", points.toString());
+        if (latest) editor.putLong("social_change",
+                Math.max(System.currentTimeMillis(), preferences.getLong("social_change", 0) + 1));
+        boolean saved = editor.commit();
+        if (saved && latest) SocialClient.recordChanged(context);
+        return saved;
+    }
     static synchronized String record(Context context, int value) {
         JSONArray points = read(context);
         long now = System.currentTimeMillis();

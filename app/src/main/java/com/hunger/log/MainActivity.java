@@ -17,6 +17,12 @@ public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final java.util.Map<String, PersonColumn> columns = new java.util.LinkedHashMap<>();
     private LinearLayout people;
+    private LinearLayout friendContent;
+    private android.widget.ScrollView friendScroll;
+    private android.widget.ViewFlipper tabs;
+    private RecordPane recordPane;
+    private Button recordsTab;
+    private Button friendsTab;
     private TextView message;
     private boolean loading;
     private boolean visible;
@@ -62,47 +68,97 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(0xff101317);
         getWindow().setNavigationBarColor(0xff101317);
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setBackgroundColor(0xff101317);
-        int pad = dp(16);
-        layout.setPadding(pad, pad, pad, pad);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xff101317);
+        root.setPadding(dp(12), dp(8), dp(12), dp(8));
         LinearLayout header = new LinearLayout(this);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
         header.addView(text("HUGGY.", 23, 0xff69e8c0), new LinearLayout.LayoutParams(0, -2, 1));
         Button add = new Button(this);
         add.setText("＋ 친구");
         add.setTextSize(13);
-        add.setOnClickListener(view -> follow());
+        add.setOnClickListener(view -> { selectTab(1); follow(); });
         header.addView(add);
         Button menu = new Button(this);
         menu.setText("⋯");
         menu.setContentDescription("계정 및 기록 메뉴");
         menu.setOnClickListener(view -> showMenu(menu));
         header.addView(menu);
-        layout.addView(header);
-        layout.addView(text("지금, 함께 어떤 상태인가요?", 21, 0xfff0f3f5));
-        layout.addView(text("공은 마지막 기록 위치 · 친구를 눌러 팔로우 관리", 12, 0xffa6b0bb));
+        root.addView(header);
+        LinearLayout navigation = new LinearLayout(this);
+        recordsTab = new Button(this);
+        recordsTab.setText("내 기록");
+        recordsTab.setOnClickListener(view -> selectTab(0));
+        friendsTab = new Button(this);
+        friendsTab.setText("함께 보기");
+        friendsTab.setOnClickListener(view -> selectTab(1));
+        navigation.addView(recordsTab, new LinearLayout.LayoutParams(0, dp(48), 1));
+        navigation.addView(friendsTab, new LinearLayout.LayoutParams(0, dp(48), 1));
+        root.addView(navigation);
+        tabs = new android.widget.ViewFlipper(this);
+        android.widget.ScrollView recordScroll = new android.widget.ScrollView(this);
+        recordScroll.setFillViewport(true);
+        recordPane = new RecordPane(this);
+        recordScroll.addView(recordPane, new android.widget.ScrollView.LayoutParams(-1, -2));
+        tabs.addView(recordScroll, new android.widget.ViewFlipper.LayoutParams(-1, -1));
+        friendScroll = new android.widget.ScrollView(this);
+        friendContent = new LinearLayout(this);
+        friendContent.setOrientation(LinearLayout.VERTICAL);
+        friendContent.addView(text("지금, 함께 어떤 상태인가요?", 21, 0xfff0f3f5));
+        friendContent.addView(text("공은 마지막 기록 위치 · 친구를 눌러 팔로우 관리", 12, 0xffa6b0bb));
         android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
         people = new LinearLayout(this);
         people.setOrientation(LinearLayout.HORIZONTAL);
         scroll.addView(people);
-        layout.addView(scroll);
+        friendContent.addView(scroll);
         message = text("", 12, 0xffa6b0bb);
         message.setPadding(0, dp(12), 0, dp(12));
-        layout.addView(message);
-        TextView account = text("계정·친구 코드 관리 ›", 14, 0xffb59aff);
-        account.setPadding(0, dp(12), 0, dp(12));
-        account.setOnClickListener(view -> startActivity(new android.content.Intent(this, AccountActivity.class)));
-        layout.addView(account);
-        layout.addView(text("내 상태 입력은 홈 화면 HUGGY 위젯에서", 12, 0xffa6b0bb));
-        android.widget.ScrollView page = new android.widget.ScrollView(this);
-        page.addView(layout);
-        setContentView(page);
+        friendContent.addView(message);
+        friendScroll.addView(friendContent);
+        tabs.addView(friendScroll, new android.widget.ViewFlipper.LayoutParams(-1, -1));
+        root.addView(tabs, new LinearLayout.LayoutParams(-1, 0, 1));
+        friendContent.getViewTreeObserver().addOnGlobalLayoutListener(this::resizeFriendRails);
+        setContentView(root);
+        selectTab(state == null ? getIntent().getIntExtra("tab", 0) : state.getInt("tab", 0));
     }
 
+    void selectTab(int tab) {
+        int selected = tab == 1 ? 1 : 0;
+        tabs.setDisplayedChild(selected);
+        recordsTab.setTextColor(selected == 0 ? 0xff101317 : 0xffe2e7ec);
+        friendsTab.setTextColor(selected == 1 ? 0xff101317 : 0xffe2e7ec);
+        recordsTab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selected == 0 ? 0xff69e8c0 : 0xff252d35));
+        friendsTab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(selected == 1 ? 0xff69e8c0 : 0xff252d35));
+        if (selected == 1) recordPane.stop();
+        render();
+    }
+
+    private void resizeFriendRails() {
+        if (friendScroll.getHeight() == 0 || columns.isEmpty()) return;
+        int current = columns.values().iterator().next().rail.getLayoutParams().height;
+        int fixed = friendContent.getHeight() - current;
+        int target = Math.max(dp(160), friendScroll.getHeight() - fixed);
+        if (target == current) return;
+        for (PersonColumn column : columns.values()) {
+            column.rail.setLayoutParams(new LinearLayout.LayoutParams(-1, target));
+        }
+    }
+
+    @Override protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        selectTab(intent.getIntExtra("tab", 0));
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putInt("tab", tabs.getDisplayedChild());
+        super.onSaveInstanceState(state);
+    }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
     private void render() {
+        if (recordPane != null) recordPane.refresh();
         JSONArray members = SocialClient.cached(this).optJSONArray("members");
         JSONObject own = new JSONObject();
         try {
@@ -172,18 +228,18 @@ public class MainActivity extends Activity {
         popup.getMenu().add(0, 2, 1, WeightHistory.todayLabel(this));
         popup.getMenu().add(0, 3, 2, "매일의 점수·몸무게");
         popup.getMenu().add(0, 4, 3, "위젯 추가");
-        popup.getMenu().add(0, 5, 4, "허기 기록 초기화");
+        popup.getMenu().add(0, 6, 4, "허기 기록 수정");
+        popup.getMenu().add(0, 5, 5, "허기 기록 초기화");
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) startActivity(new android.content.Intent(this, AccountActivity.class));
             if (item.getItemId() == 2) startActivity(new android.content.Intent(this, WeightActivity.class));
             if (item.getItemId() == 3) startActivity(new android.content.Intent(this, DailyHistoryActivity.class));
             if (item.getItemId() == 4) {
-                android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(this);
-                if (android.os.Build.VERSION.SDK_INT >= 26 && manager.isRequestPinAppWidgetSupported()) {
-                    manager.requestPinAppWidget(new android.content.ComponentName(this, HomeWidget.class), null, null);
-                } else new android.app.AlertDialog.Builder(this).setMessage("홈 화면을 길게 누르고 HUGGY 위젯을 추가하세요.")
-                        .setPositiveButton("확인", null).show();
+                new android.app.AlertDialog.Builder(this).setTitle("위젯 선택")
+                        .setItems(new String[]{"HUGGY 기본", "HUGGY 미니"}, (dialog, which) ->
+                                pinWidget(which == 0 ? HomeWidget.class : CompactWidget.class)).show();
             }
+            if (item.getItemId() == 6) startActivity(new android.content.Intent(this, RecordHistoryActivity.class));
             if (item.getItemId() == 5) {
                 new android.app.AlertDialog.Builder(this).setMessage("휴대폰의 허기 기록을 초기화할까요?")
                         .setNegativeButton("취소", null).setPositiveButton("초기화", (dialog, which) -> {
@@ -198,6 +254,13 @@ public class MainActivity extends Activity {
         popup.show();
     }
 
+    private void pinWidget(Class<?> provider) {
+        android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(this);
+        if (android.os.Build.VERSION.SDK_INT >= 26 && manager.isRequestPinAppWidgetSupported()) {
+            manager.requestPinAppWidget(new android.content.ComponentName(this, provider), null, null);
+        } else new android.app.AlertDialog.Builder(this).setMessage("홈 화면을 길게 누르고 HUGGY 위젯을 추가하세요.")
+                .setPositiveButton("확인", null).show();
+    }
     @Override protected void onResume() {
         super.onResume();
         visible = true;
@@ -207,6 +270,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onPause() {
         visible = false;
+        recordPane.stop();
         handler.removeCallbacks(refresh);
         for (PersonColumn column : columns.values()) column.rail.stop();
         super.onPause();

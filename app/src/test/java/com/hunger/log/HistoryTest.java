@@ -52,4 +52,22 @@ public class HistoryTest {
         assertEquals(11.0 / 3, History.averages(points)[2], 0.0001);
         assertEquals(83, History.todayScore(points));
     }
+    @Test public void editPreservesTimeAndPointCountAndRecomputesMean() {
+        JSONArray points = records(3, 3);
+        long time = points.optJSONArray(1).optLong(0);
+        assertEquals(true, History.replaceValue(points, 1, time, 5));
+        assertEquals(2, points.length());
+        assertEquals(time, points.optJSONArray(1).optLong(0));
+        assertEquals(4, History.averages(points)[1], 0.0001);
+        assertEquals(100, History.todayScore(points));
+    }
+
+    @Test public void oldRowEditDoesNotOverwriteNewlyAppendedRecord() {
+        JSONArray points = records(3, 3, 1);
+        long time = points.optJSONArray(1).optLong(0);
+        assertEquals(true, History.replaceValue(points, 1, time, 4));
+        assertEquals(1, points.optJSONArray(2).optInt(1));
+        assertEquals(false, History.replaceValue(points, 1, time + 1, 5));
+        assertEquals(false, History.replaceValue(points, 1, time, 6));
+    }
 }

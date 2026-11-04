@@ -3,17 +3,22 @@
  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
  <application android:label="HUGGY" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
-  <activity android:name=".MainActivity" android:exported="true">
+  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
   <activity android:name=".WeightActivity" android:exported="false" android:theme="@android:style/Theme.Material.Light.Dialog.NoActionBar"/>
   <activity android:name=".DailyHistoryActivity" android:exported="false"/>
 
+  <activity android:name=".RecordHistoryActivity" android:exported="false"/>
   <activity android:name=".AccountActivity" android:exported="false"/>
   <service android:name=".SocialSync" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
   <receiver android:name=".HomeWidget" android:exported="false">
    <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
    <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget"/>
+  </receiver>
+  <receiver android:name=".CompactWidget" android:label="HUGGY 미니" android:exported="false">
+   <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+   <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_compact"/>
   </receiver>
  </application>
 </manifest>

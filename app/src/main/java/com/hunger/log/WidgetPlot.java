@@ -82,18 +82,19 @@ final class WidgetPlot {
         return bitmap;
     }
 
-    static Bitmap effect(JSONArray points, int width, int height, int selected, float progress) {
+    static Bitmap effect(JSONArray points, int width, int height, int selected, float progress, boolean compact) {
         Bitmap bitmap = Bitmap.createBitmap(Math.max(1, width), Math.max(1, height), Bitmap.Config.ARGB_8888);
         int first = firstToday(points);
         if (selected < 0 || first == points.length() || progress >= 1.43f) return bitmap;
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         int last = points.length() - 1;
-        float destinationX = 14 + x(points, first, last, Math.max(80, Math.round((width - 28) * 1.65f / 2.65f)));
-        float destinationY = 116 + y(points.optJSONArray(last).optDouble(1), height - 346);
+        float destinationX = (compact ? 10 : 14) + x(points, first, last,
+                Math.max(100, compact ? width - 20 : Math.round((width - 28) * 1.65f / 2.65f)));
+        float destinationY = (compact ? 94 : 116) + y(points.optJSONArray(last).optDouble(1), height - (compact ? 268 : 346));
         if (progress < 1) {
-            float originX = 14 + (width - 28) * (selected / 3 == 0 ? 0.25f : 0.75f);
-            float originY = height - 164 + (selected % 3) * 52;
+            float originX = (compact ? 10 : 14) + (width - (compact ? 20 : 28)) * (selected / 3 == 0 ? 0.25f : 0.75f);
+            float originY = height - (compact ? 136 : 164) + (selected % 3) * (compact ? 44 : 52);
             for (int tail = 9; tail >= 0; tail--) {
                 float t = Math.max(0, progress - tail * 0.027f);
                 float u = 1 - t;
