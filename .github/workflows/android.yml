@@ -1,10 +1,13 @@
 name: Android APK
 on: [push, workflow_dispatch]
+permissions:
+  contents: write
+  actions: read
 jobs:
   apk:
     runs-on: ubuntu-24.04
     concurrency:
-      group: hunger-log-signing
+      group: huggy-release
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
@@ -15,31 +18,34 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - uses: actions/cache/restore@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: hunger-log-signing-v1
-          fail-on-cache-miss: true
-      - name: Prepare signing key
+      - name: Restore permanent signing key
+        env:
+          HUGGY_KEYSTORE_BASE64: ${{ secrets.HUGGY_KEYSTORE_BASE64 }}
         run: |
+          test -n "$HUGGY_KEYSTORE_BASE64" || { echo "Signing secret missing. Refusing to create a replacement key."; exit 1; }
           mkdir -p ~/.android
-          test -s ~/.android/debug.keystore || { echo "Existing signing key missing. Refusing to create a different key."; exit 1; }
+          printf '%s' "$HUGGY_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
+          chmod 600 ~/.android/debug.keystore
       - run: gradle :app:assembleDebug --no-build-cache --rerun-tasks
-      - name: Verify update signature against version 1.2
+      - name: Verify permanent signing certificate
+        run: |
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          digest=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          test "$digest" = "29fb1185128ac4b625a3a5304145f614496fb317a9ec5b6d92e19e500cb2ffb5" || { echo "Signing certificate changed. Release blocked."; exit 1; }
+          echo "Verified permanent HUGGY certificate: $digest" >> "$GITHUB_STEP_SUMMARY"
+          version=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
+          cp app/build/outputs/apk/debug/app-debug.apk "HUGGY-$version.apk"
+          echo "HUGGY_VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HUGGY
+          path: HUGGY-*.apk
+      - name: Publish APK download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download 41751777762 --repo hojung1231/asdf --name hunger-log-apk --dir /tmp/huggy-v12
-          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
-          "$signer" verify --print-certs /tmp/huggy-v12/app-debug.apk
-          old=$("$signer" verify --print-certs /tmp/huggy-v12/app-debug.apk | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
-          new=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
-          echo "Version 1.2 certificate: $old"
-          echo "Update certificate: $new"
-          test -n "$old" && test "$old" = "$new" || { echo "Signature mismatch. Update blocked."; exit 1; }
-          echo "Verified: version 1.2 and this update use the same signing certificate."
-          echo "Certificate SHA-256: $new" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hunger-log-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          tag="huggy-v$HUGGY_VERSION"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title "HUGGY $HUGGY_VERSION" --notes "Install the APK from Assets. This release starts permanent signing. Earlier installations must be removed once. Removing the old app deletes its saved records."
+          fi
+          gh release upload "$tag" "HUGGY-$HUGGY_VERSION.apk" --clobber

@@ -1,0 +1,4 @@
+.local-signing/
+.gradle/
+app/build/
+local.properties
