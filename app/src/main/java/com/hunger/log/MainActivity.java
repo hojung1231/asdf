@@ -292,7 +292,7 @@ public class MainActivity extends Activity {
             name.setMaxLines(2);
             name.setEllipsize(android.text.TextUtils.TruncateAt.END);
             addView(name, new LinearLayout.LayoutParams(-1, dp(44)));
-            rail = new Rail(initial.optBoolean("own") ? 0xff69e8c0 : 0xffb59aff);
+            rail = new Rail(initial.optBoolean("own") ? 0xff69e8c0 : 0xffb59aff, initial.optBoolean("own"));
             addView(rail, new LinearLayout.LayoutParams(-1, dp(240)));
             state = text("", 12, 0xffe2e7ec);
             state.setGravity(android.view.Gravity.CENTER);
@@ -327,10 +327,15 @@ public class MainActivity extends Activity {
     private class Rail extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final int color;
+        private final boolean showScale;
         private float position = 1;
         private int target;
         private android.animation.ValueAnimator animation;
-        Rail(int color) { super(MainActivity.this); this.color = color; }
+        Rail(int color, boolean showScale) {
+            super(MainActivity.this);
+            this.color = color;
+            this.showScale = showScale;
+        }
 
         void stop() {
             if (animation != null) animation.cancel();
@@ -359,8 +364,10 @@ public class MainActivity extends Activity {
                 float y = bottom - (bottom - top) * (level - 1) / 5;
                 paint.setColor(0xff52616b);
                 canvas.drawCircle(center, y, dp(2), paint);
-                paint.setColor(0xffa6b0bb);
-                canvas.drawText(String.valueOf(level), dp(5), y + dp(3), paint);
+                if (showScale) {
+                    paint.setColor(0xffa6b0bb);
+                    canvas.drawText(String.valueOf(level), dp(5), y + dp(3), paint);
+                }
             }
             if (target < 1) return;
             float y = bottom - (bottom - top) * (position - 1) / 5;
