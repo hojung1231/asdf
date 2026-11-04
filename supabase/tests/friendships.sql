@@ -64,7 +64,24 @@ do $$ declare s jsonb; begin
   if jsonb_array_length(s->'members') <> 2 then raise exception 'Sender friendship missing'; end if;
   if not exists(select 1 from jsonb_array_elements(s->'members') p where p->>'nickname'='요한' and p->>'level'='2') then raise exception 'Sender cannot see recipient status'; end if;
 end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+select public.huggy_update_profile('요한',false);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+do $$ declare s jsonb; begin
+  s := public.huggy_snapshot();
+  if exists(select 1 from jsonb_array_elements(s->'members') p where p->>'nickname'='요한' and p->'level' <> 'null'::jsonb)
+    or exists(select 1 from jsonb_array_elements(s->'feed') e where e->>'nickname'='요한') then raise exception 'Friend sharing opt-out leaked state'; end if;
+end $$;
 select public.huggy_unfollow('00000000-0000-0000-0000-000000000002');
+-- Approval retries must not restore a deleted friendship.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+do $$ begin
+  begin
+    perform public.huggy_respond_friend('00000000-0000-0000-0000-000000000001',true);
+    raise exception 'Deleted friendship was restored';
+  exception when raise_exception then if SQLERRM = 'Deleted friendship was restored' then raise; end if; end;
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
 select public.huggy_follow('0123456789abcdef');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
 do $$ begin

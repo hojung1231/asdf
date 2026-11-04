@@ -98,4 +98,38 @@ public class LayoutTest {
         }
         return null;
     }
+
+    @Test public void friendRequestsSeparateIncomingApprovalFromOutgoingCancellation() throws Exception {
+        try (ActivityController<FriendRequestsActivity> controller = Robolectric.buildActivity(FriendRequestsActivity.class).create()) {
+            FriendRequestsActivity activity = controller.get();
+            org.json.JSONArray requests = new org.json.JSONArray()
+                    .put(new org.json.JSONObject().put("user_id", "a").put("nickname", "요한").put("incoming", true))
+                    .put(new org.json.JSONObject().put("user_id", "b").put("nickname", "길동").put("incoming", false));
+            java.lang.reflect.Method render = FriendRequestsActivity.class.getDeclaredMethod("render", org.json.JSONObject.class);
+            render.setAccessible(true);
+            render.invoke(activity, new org.json.JSONObject().put("requests", requests));
+            ViewGroup content = activity.findViewById(android.R.id.content);
+            View root = content.getChildAt(0);
+            measure(root, 320, 568);
+            java.util.List<String> actions = new java.util.ArrayList<>();
+            collectButtons(root, actions);
+            assertEquals(1, java.util.Collections.frequency(actions, "승인"));
+            assertEquals(1, java.util.Collections.frequency(actions, "거절"));
+            assertEquals(1, java.util.Collections.frequency(actions, "요청 취소"));
+            render.invoke(activity, new org.json.JSONObject().put("requests", new org.json.JSONArray()));
+            actions.clear();
+            collectButtons(root, actions);
+            assertFalse(actions.contains("승인"));
+            assertFalse(actions.contains("거절"));
+            assertFalse(actions.contains("요청 취소"));
+        }
+    }
+
+    private void collectButtons(View view, java.util.List<String> actions) {
+        if (view instanceof android.widget.Button) actions.add(((android.widget.Button) view).getText().toString());
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) collectButtons(group.getChildAt(i), actions);
+        }
+    }
 }
