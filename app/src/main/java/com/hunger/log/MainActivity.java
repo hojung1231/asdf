@@ -100,6 +100,8 @@ public class MainActivity extends Activity {
             final int value = i;
             Button button = new Button(this);
             button.setText(History.LABELS[i]);
+            button.setBackgroundTintList(null);
+            button.setBackgroundResource(i < 3 ? R.drawable.button_full : R.drawable.button_hungry);
             button.setOnClickListener(v -> {
                 int before = History.read(this).length();
                 String result = History.record(this, value);
