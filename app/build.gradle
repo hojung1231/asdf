@@ -1,0 +1,12 @@
+plugins { id 'com.android.application' version '8.7.3' }
+android {
+    namespace 'com.hunger.log'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.hunger.log'
+        minSdk 23
+        targetSdk 32
+        versionCode 1
+        versionName '1.0'
+    }
+}

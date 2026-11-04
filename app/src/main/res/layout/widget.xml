@@ -1,0 +1,8 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="8dp" android:background="#F0F8F3" android:layout_width="match_parent" android:layout_height="match_parent">
+<TextView android:id="@+id/status" android:textColor="#164638" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<Button android:id="@+id/b0" android:layout_width="match_parent" android:layout_height="40dp" android:minHeight="0dp" android:padding="0dp"/>
+<Button android:id="@+id/b1" android:layout_width="match_parent" android:layout_height="40dp" android:minHeight="0dp" android:padding="0dp"/>
+<Button android:id="@+id/b2" android:layout_width="match_parent" android:layout_height="40dp" android:minHeight="0dp" android:padding="0dp"/>
+<Button android:id="@+id/b3" android:layout_width="match_parent" android:layout_height="40dp" android:minHeight="0dp" android:padding="0dp"/>
+<Button android:id="@+id/b4" android:layout_width="match_parent" android:layout_height="40dp" android:minHeight="0dp" android:padding="0dp"/>
+</LinearLayout>
