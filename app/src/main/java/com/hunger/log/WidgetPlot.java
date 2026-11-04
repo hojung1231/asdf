@@ -31,7 +31,7 @@ final class WidgetPlot {
         label(canvas, paint, status, 16, 159, 11, MUTED);
         for (int i = 0; i < History.LABELS.length; i++) {
             float y = 170 + i * 36;
-            paint.setColor(i == selected ? 0xff17433b : 0xff141a2c);
+            paint.setColor(i == selected && (progress < 0.26f || progress == 2) ? 0xff17433b : 0xff141a2c);
             canvas.drawRoundRect(12, y + 3, 288, y + 33, 10, 10, paint);
             label(canvas, paint, History.LABELS[i], 29, y + 23, 13, i == 3 || i == selected ? MINT : MUTED);
         }
@@ -55,13 +55,20 @@ final class WidgetPlot {
             float average = TOP + STEP * (float) (sum / (i + 1));
             if (i == count - 1 && progress < 1) {
                 float fromY = 188 + selected * 36;
-                float eased = progress * (2 - progress);
-                float orbX = 260 + (x - 260) * eased;
-                float orbY = fromY + (y - fromY) * eased;
-                paint.setColor(0x7054ffce);
-                canvas.drawCircle(orbX, orbY, 9, paint);
-                paint.setColor(MINT);
-                canvas.drawCircle(orbX, orbY, 4, paint);
+                for (int tail = 8; tail >= 0; tail--) {
+                    float t = Math.max(0, progress - tail * 0.032f);
+                    float eased = t * t * (3 - 2 * t);
+                    float arc = (float) Math.sin(Math.PI * t);
+                    float orbX = 260 + (x - 260) * eased - 52 * arc;
+                    float orbY = fromY + (y - fromY) * t - 24 * arc;
+                    paint.setColor(MINT);
+                    paint.setAlpha(175 - tail * 18);
+                    canvas.drawCircle(orbX, orbY, 9 - tail * 0.8f, paint);
+                    if (tail == 0) {
+                        paint.setColor(0xfff4fffc);
+                        canvas.drawCircle(orbX, orbY, 4, paint);
+                    }
+                }
                 break;
             }
             paint.setStrokeWidth(1.5f);
@@ -73,6 +80,20 @@ final class WidgetPlot {
             paint.setStyle(Paint.Style.STROKE);
             canvas.drawCircle(x, average, 3.5f, paint);
             paint.setStyle(Paint.Style.FILL);
+            if (i == count - 1 && progress >= 1 && progress < 1.43f) {
+                float impact = Math.min(1, (progress - 1) / 0.43f);
+                paint.setColor(MINT);
+                paint.setAlpha((int) (255 * (1 - impact)));
+                paint.setStyle(Paint.Style.STROKE);
+                canvas.drawCircle(x, y, 5 + 23 * impact, paint);
+                paint.setStyle(Paint.Style.FILL);
+                for (int spark = 0; spark < 8; spark++) {
+                    double angle = spark * Math.PI / 4;
+                    float distance = 8 + 19 * impact;
+                    canvas.drawCircle(x + (float) Math.cos(angle) * distance,
+                            y + (float) Math.sin(angle) * distance, 2, paint);
+                }
+            }
             lastX = x;
             lastY = y;
             lastAverage = average;

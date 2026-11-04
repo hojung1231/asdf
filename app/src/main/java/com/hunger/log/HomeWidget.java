@@ -24,32 +24,47 @@ public class HomeWidget extends AppWidgetProvider {
             if (value >= 0 && value < BUTTONS.length) {
                 int before = History.read(context).length();
                 String status = History.record(context, value);
-                if (History.read(context).length() > before) {
-                    PendingResult pending = goAsync();
-                    refresh(context, status, value, 0);
-                    for (int i = 1; i <= 8; i++) {
-                        final int frame = i;
-                        FRAMES.postDelayed(() -> {
-                            try {
-                                if (History.read(context).length() == before + 1) {
-                                    refresh(context, status, value, frame / 8f);
-                                }
-                            } finally {
-                                if (frame == 8) pending.finish();
-                            }
-                        }, i * 65L);
-                    }
-                } else {
-                    refresh(context, status, value);
-                }
+                boolean saved = History.read(context).length() > before;
+                animate(context, status, value, saved, goAsync());
             }
         }
     }
 
-    static void refresh(Context context, String status, int selected) {
-        refresh(context, status, selected, 1);
+    private static int animationId;
+    private static boolean flying;
+
+    private static void animate(Context context, String status, int selected, boolean saved,
+                                PendingResult pending) {
+        if (flying && !saved) {
+            if (pending != null) pending.finish();
+            return;
+        }
+        int id = ++animationId;
+        flying = saved;
+        int frames = saved ? 20 : 4;
+        for (int i = 0; i <= frames; i++) {
+            final int frame = i;
+            FRAMES.postDelayed(() -> {
+                try {
+                    if (id != animationId) return;
+                    if (frame == frames) {
+                        flying = false;
+                        refresh(context, status, -1, 2);
+                    } else {
+                        float progress = saved ? frame / 14f : 2;
+                        refresh(context, status, selected, progress);
+                    }
+                } finally {
+                    if (frame == frames && pending != null) pending.finish();
+                }
+            }, i * 55L);
+        }
     }
 
+    static void refresh(Context context, String status, int selected) {
+        if (selected < 0) refresh(context, status, -1, 2);
+        else animate(context, status, selected, false, null);
+    }
     private static void refresh(Context context, String status, int selected, float progress) {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.widget);
         int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
