@@ -26,7 +26,7 @@ jobs:
           mkdir -p ~/.android
           printf '%s' "$HUGGY_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
           chmod 600 ~/.android/debug.keystore
-      - run: gradle :app:assembleDebug --no-build-cache --rerun-tasks
+      - run: gradle :app:testDebugUnitTest :app:assembleDebug --no-build-cache --rerun-tasks
       - name: Verify permanent signing certificate
         run: |
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)

@@ -13,6 +13,7 @@ import org.json.JSONArray;
 public class MainActivity extends Activity {
     private TextView status;
     private Chart chart;
+    private TextView score;
     private int period;
     private int offset;
     private TextView rangeLabel;
@@ -42,6 +43,7 @@ public class MainActivity extends Activity {
         java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.KOREA);
         rangeLabel.setText(format.format(new java.util.Date(start)) + " ~ " + format.format(new java.util.Date(end - 1)));
         chart.reload();
+        score.setText(History.scoreText(History.read(this)));
     }
 
     private void control(LinearLayout row, String label, Runnable action) {
@@ -61,6 +63,9 @@ public class MainActivity extends Activity {
         status.setText("HUGGY");
         status.setTextSize(18);
         layout.addView(status);
+        score = new TextView(this);
+        score.setTextSize(16);
+        layout.addView(score);
         LinearLayout periods = new LinearLayout(this);
         layout.addView(periods);
         String[] names = {"하루", "일주일", "한 달"};

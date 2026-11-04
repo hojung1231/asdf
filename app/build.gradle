@@ -14,7 +14,11 @@ android {
         applicationId 'com.hunger.log'
         minSdk 23
         targetSdk 32
-        versionCode 6
-        versionName '1.4'
+        versionCode 7
+        versionName '1.5'
     }
+}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }

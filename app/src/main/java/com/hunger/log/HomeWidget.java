@@ -74,11 +74,24 @@ public class HomeWidget extends AppWidgetProvider {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.widget);
         int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
         org.json.JSONArray points = History.read(context);
+        view.setTextViewText(R.id.status, status);
+        view.setTextViewText(R.id.score, History.scoreText(points));
+        view.setContentDescription(R.id.score, "오늘 기록된 시간 중 2~4단계에 머문 비율. " + History.scoreText(points));
+        double[] averages = History.averages(points);
+        view.setTextViewText(R.id.mean, points.length() == 0 ? "누적 평균" : "누적 평균" + (char) 10
+                + String.format(java.util.Locale.KOREA, "%.1f / 6", 6 - averages[averages.length - 1]));
+        org.json.JSONArray last = points.optJSONArray(points.length() - 1);
+        view.setTextViewText(R.id.current, last == null || last.optLong(0) < History.todayStart()
+                ? "오늘 첫 기록" : "지금 나의 허기" + (char) 10 + History.LABELS[last.optInt(1)].substring(3));
+        view.setTextViewText(R.id.legend, android.text.Html.fromHtml(
+                "<font color='#69e8c0'>━ 허기 기록</font>　<font color='#b59aff'>━ 누적 평균</font>　▪ 목표 구간"));
+        view.setOnClickPendingIntent(R.id.brand, PendingIntent.getActivity(context, 0,
+                new Intent(context, MainActivity.class), flags));
         view.setContentDescription(R.id.status, status + " · 그래프 열기");
         view.setOnClickPendingIntent(R.id.status, PendingIntent.getActivity(context, 0,
                 new Intent(context, MainActivity.class), flags));
         for (int i = 0; i < BUTTONS.length; i++) {
-            view.setTextViewText(BUTTONS[i], (i == selected ? "✓ " : "") + History.LABELS[i]);
+            view.setTextViewText(BUTTONS[i], History.LABELS[i]);
             Intent click = new Intent(context, HomeWidget.class).setAction("com.hunger.log.RECORD");
             click.putExtra("value", i);
             view.setOnClickPendingIntent(BUTTONS[i], PendingIntent.getBroadcast(context, i, click, flags));
@@ -93,9 +106,14 @@ public class HomeWidget extends AppWidgetProvider {
                     : AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 300);
             int height = size.getInt(landscape ? AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
                     : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 350);
-            float textScale = Math.max(0.65f, Math.min(1.35f, 300f * height / (350f * Math.max(1, width))));
             RemoteViews sized = view.clone();
-            sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, status, selected, progress, textScale));
+            sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, Math.max(100, width - 28),
+                    Math.max(50, height - 314), progress));
+            sized.setImageViewBitmap(R.id.effect, WidgetPlot.effect(points, width, height, selected, progress));
+            for (int i = 0; i < BUTTONS.length; i++) {
+                sized.setTextColor(BUTTONS[i], i == selected && (progress < 0.26f || progress == 2)
+                        ? 0xff69e8c0 : 0xffe2e7ec);
+            }
             manager.updateAppWidget(id, sized);
         }
     }
