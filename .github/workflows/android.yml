@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir -p ~/.android
           test -s ~/.android/debug.keystore || { echo "Existing signing key missing. Refusing to create a different key."; exit 1; }
-      - run: gradle :app:assembleDebug
+      - run: gradle :app:assembleDebug --no-build-cache --rerun-tasks
       - name: Verify update signature against version 1.2
         env:
           GH_TOKEN: ${{ github.token }}
@@ -33,6 +33,8 @@ jobs:
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
           old=$("$signer" verify --print-certs /tmp/huggy-v12/app-debug.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
           new=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          echo "Version 1.2 certificate: $old"
+          echo "Update certificate: $new"
           test -n "$old" && test "$old" = "$new" || { echo "Signature mismatch. Update blocked."; exit 1; }
           echo "Verified: version 1.2 and this update use the same signing certificate."
           echo "Certificate SHA-256: $new" >> "$GITHUB_STEP_SUMMARY"
