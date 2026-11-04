@@ -111,6 +111,11 @@ public class HomeWidget extends AppWidgetProvider {
                 new Intent(context, FriendsActivity.class), flags));
         view.setContentDescription(R.id.friendPanel, "가상 친구 소식. " +
                 DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())) + ". 함께 보기 열기");
+        view.setTextViewText(R.id.weight, WeightHistory.todayLabel(context));
+        view.setOnClickPendingIntent(R.id.weight, PendingIntent.getActivity(context, 20,
+                new Intent(context, WeightActivity.class), flags));
+        view.setOnClickPendingIntent(R.id.score, PendingIntent.getActivity(context, 21,
+                new Intent(context, DailyHistoryActivity.class), flags));
         view.setTextViewText(R.id.status, status);
         view.setTextViewText(R.id.score, History.scoreText(points));
         view.setContentDescription(R.id.score, "현재 누적 평균 기준. 평균 2 이하는 100점, 4 이상은 0점. " + History.scoreText(points));
@@ -145,7 +150,7 @@ public class HomeWidget extends AppWidgetProvider {
                     : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 350);
             RemoteViews sized = view.clone();
             sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, Math.max(80, Math.round((width - 28) * 1.65f / 2.65f)),
-                    Math.max(50, height - 314), progress));
+                    Math.max(50, height - 346), progress));
             sized.setImageViewBitmap(R.id.effect, WidgetPlot.effect(points, width, height, selected, progress));
             for (int i = 0; i < BUTTONS.length; i++) {
                 sized.setTextColor(BUTTONS[i], i == selected && (progress < 0.26f || progress == 2)

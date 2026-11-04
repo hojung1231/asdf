@@ -58,6 +58,18 @@ public class FriendsActivity extends Activity {
         feed.setPadding(0, padding / 2, 0, padding / 2);
         feed.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         layout.addView(feed);
+        layout.addView(text("허기점수 · 몸무게 변화 보기", 13, 0xffa6b0bb));
+        LinearLayout historyButtons = new LinearLayout(this);
+        for (int i = 0; i < DemoFriends.NAMES.length; i++) {
+            final int friend = i;
+            Button button = new Button(this);
+            button.setText(DemoFriends.NAMES[i] + " 이력");
+            button.setTextSize(12);
+            button.setOnClickListener(view -> startActivity(new android.content.Intent(
+                    this, DailyHistoryActivity.class).putExtra("friend", friend)));
+            historyButtons.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        layout.addView(historyButtons);
         Button record = new Button(this);
         record.setText("내 상태 기록하기");
         record.setOnClickListener(view -> {

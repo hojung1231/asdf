@@ -34,10 +34,24 @@ final class History {
         double displayedAverage = 6 - averages[averages.length - 1];
         return scoreFromAverage(displayedAverage);
     }
+    static JSONArray inPeriod(JSONArray points, long from, long to) {
+        JSONArray result = new JSONArray();
+        for (int i = 0; i < points.length(); i++) {
+            JSONArray point = points.optJSONArray(i);
+            long time = point.optLong(0);
+            if (time >= from && time < to) result.put(point);
+        }
+        return result;
+    }
+
+    static String face(int score) {
+        return score >= 80 ? "😊" : score >= 50 ? "😐" : "😕";
+    }
+
     static String scoreText(JSONArray points) {
         int score = todayScore(points);
         if (score < 0) return "오늘의 허기점수\n😶 기록 중";
-        String face = score >= 80 ? "😊" : score >= 50 ? "😐" : "😕";
+        String face = face(score);
         return "오늘의 허기점수\n" + face + " " + score + "점";
     }
     static double[] averages(JSONArray points) {

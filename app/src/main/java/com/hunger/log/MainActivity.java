@@ -14,6 +14,7 @@ public class MainActivity extends Activity {
     private TextView status;
     private Chart chart;
     private TextView score;
+    private Button weight;
     private int period;
     private int offset;
     private TextView rangeLabel;
@@ -66,6 +67,13 @@ public class MainActivity extends Activity {
         score = new TextView(this);
         score.setTextSize(16);
         layout.addView(score);
+        LinearLayout health = new LinearLayout(this);
+        weight = new Button(this);
+        weight.setTextSize(12);
+        weight.setOnClickListener(view -> startActivity(new android.content.Intent(this, WeightActivity.class)));
+        health.addView(weight, new LinearLayout.LayoutParams(0, -2, 1));
+        control(health, "매일의 기록", () -> startActivity(new android.content.Intent(this, DailyHistoryActivity.class)));
+        layout.addView(health);
         Button friends = new Button(this);
         friends.setText("친구들의 허기 상태 · 데모");
         friends.setOnClickListener(view -> startActivity(
@@ -91,7 +99,7 @@ public class MainActivity extends Activity {
                 + "<font color='#8b4cb6'>● 누적 평균</font>　<font color='#397852'>■ 안전 구간</font>"));
         layout.addView(legend);
         chart = new Chart();
-        layout.addView(chart, new LinearLayout.LayoutParams(-1, 0, 1));
+        layout.addView(chart, new LinearLayout.LayoutParams(-1, (int) (260 * getResources().getDisplayMetrics().density)));
         LinearLayout choices = new LinearLayout(this);
         layout.addView(choices);
         LinearLayout[] columns = {new LinearLayout(this), new LinearLayout(this)};
@@ -126,12 +134,15 @@ public class MainActivity extends Activity {
                     }
                 }).show());
         layout.addView(reset);
-        setContentView(layout);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(layout);
+        setContentView(scroll);
     }
 
     @Override protected void onResume() {
         super.onResume();
         updateRange();
+        weight.setText(WeightHistory.todayLabel(this));
         JSONArray last = chart.points.optJSONArray(chart.points.length() - 1);
         if (last != null && System.currentTimeMillis() - last.optLong(0) < 60_000) chart.pulse();
     }
