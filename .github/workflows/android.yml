@@ -31,8 +31,9 @@ jobs:
         run: |
           gh run download 41751777762 --repo hojung1231/asdf --name hunger-log-apk --dir /tmp/huggy-v12
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
-          old=$("$signer" verify --print-certs /tmp/huggy-v12/app-debug.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-          new=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          "$signer" verify --print-certs /tmp/huggy-v12/app-debug.apk
+          old=$("$signer" verify --print-certs /tmp/huggy-v12/app-debug.apk | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          new=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
           echo "Version 1.2 certificate: $old"
           echo "Update certificate: $new"
           test -n "$old" && test "$old" = "$new" || { echo "Signature mismatch. Update blocked."; exit 1; }
