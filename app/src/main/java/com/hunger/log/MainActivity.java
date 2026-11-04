@@ -14,7 +14,7 @@ public class MainActivity extends Activity {
     private TextView status;
     private Chart chart;
     private TextView score;
-    private Button weight;
+
     private int period;
     private int offset;
     private TextView rangeLabel;
@@ -60,25 +60,24 @@ public class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         int padding = (int) (16 * getResources().getDisplayMetrics().density);
         layout.setPadding(padding, padding, padding, padding);
-        status = new TextView(this);
-        status.setText("HUGGY");
-        status.setTextSize(18);
-        layout.addView(status);
+        LinearLayout header = new LinearLayout(this);
+        TextView brand = new TextView(this);
+        brand.setText("HUGGY.");
+        brand.setTextSize(22);
+        brand.setTypeface(null, android.graphics.Typeface.BOLD);
+        header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
+        Button menu = new Button(this);
+        menu.setText("메뉴 ⋯");
+        menu.setTextSize(13);
+        menu.setOnClickListener(view -> showMenu(menu));
+        header.addView(menu);
+        layout.addView(header);
         score = new TextView(this);
-        score.setTextSize(16);
+        score.setTextSize(14);
         layout.addView(score);
-        LinearLayout health = new LinearLayout(this);
-        weight = new Button(this);
-        weight.setTextSize(12);
-        weight.setOnClickListener(view -> startActivity(new android.content.Intent(this, WeightActivity.class)));
-        health.addView(weight, new LinearLayout.LayoutParams(0, -2, 1));
-        control(health, "매일의 기록", () -> startActivity(new android.content.Intent(this, DailyHistoryActivity.class)));
-        layout.addView(health);
-        Button friends = new Button(this);
-        friends.setText("친구들의 허기 상태 · 데모");
-        friends.setOnClickListener(view -> startActivity(
-                new android.content.Intent(this, FriendsActivity.class)));
-        layout.addView(friends);
+        status = new TextView(this);
+        status.setTextSize(12);
+        status.setTextColor(0xff65756f);
         LinearLayout periods = new LinearLayout(this);
         layout.addView(periods);
         String[] names = {"하루", "일주일", "한 달"};
@@ -121,28 +120,44 @@ public class MainActivity extends Activity {
             });
             columns[i / 3].addView(button);
         }
-        Button reset = new Button(this);
-        reset.setText("기록 초기화");
-        reset.setOnClickListener(view -> new android.app.AlertDialog.Builder(this)
-                .setMessage("저장한 허기 기록을 모두 삭제할까요?")
-                .setNegativeButton("취소", null)
-                .setPositiveButton("삭제", (dialog, which) -> {
-                    if (getSharedPreferences("history", 0).edit().remove("points").commit()) {
-                        status.setText("기록 초기화 완료");
-                        updateRange();
-                        HomeWidget.refresh(this, "기록 초기화 완료", -1);
-                    }
-                }).show());
-        layout.addView(reset);
+        layout.addView(status);
         android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         scroll.addView(layout);
         setContentView(scroll);
     }
 
+    private void showMenu(View anchor) {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, anchor);
+        popup.getMenu().add(0, 1, 0, WeightHistory.todayLabel(this));
+        popup.getMenu().add(0, 2, 1, "매일의 점수·몸무게");
+        popup.getMenu().add(0, 3, 2, "친구들과 함께 보기 · 데모");
+        popup.getMenu().add(0, 4, 3, "허기 기록 초기화");
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1: startActivity(new android.content.Intent(this, WeightActivity.class)); break;
+                case 2: startActivity(new android.content.Intent(this, DailyHistoryActivity.class)); break;
+                case 3: startActivity(new android.content.Intent(this, FriendsActivity.class)); break;
+                case 4:
+                    new android.app.AlertDialog.Builder(this)
+                            .setMessage("저장한 허기 기록을 모두 삭제할까요?")
+                            .setNegativeButton("취소", null)
+                            .setPositiveButton("삭제", (dialog, which) -> {
+                                if (getSharedPreferences("history", 0).edit().remove("points").commit()) {
+                                    status.setText("기록 초기화 완료");
+                                    updateRange();
+                                    HomeWidget.refresh(this, "기록 초기화 완료", -1);
+                                }
+                            }).show();
+                    break;
+            }
+            return true;
+        });
+        popup.show();
+    }
     @Override protected void onResume() {
         super.onResume();
         updateRange();
-        weight.setText(WeightHistory.todayLabel(this));
+
         JSONArray last = chart.points.optJSONArray(chart.points.length() - 1);
         if (last != null && System.currentTimeMillis() - last.optLong(0) < 60_000) chart.pulse();
     }

@@ -16,21 +16,31 @@ import org.json.JSONArray;
 public class FriendsActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Bars bars;
-    private TextView feed;
+    private LinearLayout feed;
+    private android.widget.ScrollView feedScroll;
     private long lastTick = Long.MIN_VALUE;
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
             long now = System.currentTimeMillis();
-            bars.invalidate();
-            StringBuilder messages = new StringBuilder();
-            java.text.SimpleDateFormat time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.KOREA);
+            bars.setStates(now);
             long tick = DemoFriends.tick(now);
-            for (int i = 0; i < 3; i++) {
-                if (i > 0) messages.append((char) 10).append((char) 10);
-                messages.append(time.format(new java.util.Date((tick - i) * DemoFriends.INTERVAL)))
-                        .append("  ").append(DemoFriends.message(tick - i));
+            boolean changed = lastTick != Long.MIN_VALUE && lastTick != tick;
+            feed.removeAllViews();
+            for (int i = 7; i >= 0; i--) {
+                TextView bubble = text(DemoFriends.feedMessage(tick - i), 12, 0xffe2e7ec);
+                int padding = (int) (9 * getResources().getDisplayMetrics().density);
+                bubble.setPadding(padding, padding, padding, padding);
+                bubble.setBackgroundResource(R.drawable.friend_message);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+                params.bottomMargin = padding / 2;
+                feed.addView(bubble, params);
+                if (changed && i == 0) {
+                    bubble.setTranslationY(padding * 2);
+                    bubble.setAlpha(0);
+                    bubble.animate().translationY(0).alpha(1).setDuration(250).start();
+                }
             }
-            feed.setText(messages);
+            feedScroll.post(() -> feedScroll.fullScroll(View.FOCUS_DOWN));
             if (lastTick != tick) {
                 lastTick = tick;
                 HomeWidget.refresh(FriendsActivity.this, "HUGGY · 친구 소식 갱신", -1);
@@ -52,24 +62,23 @@ public class FriendsActivity extends Activity {
         layout.addView(title);
         layout.addView(text("데모 · 가상 친구 3명 · 약 1분마다 상태 변경", 12, 0xffa6b0bb));
         bars = new Bars();
-        layout.addView(bars, new LinearLayout.LayoutParams(-1, 0, 1));
+        layout.addView(bars, new LinearLayout.LayoutParams(-1,
+                (int) (280 * getResources().getDisplayMetrics().density)));
         layout.addView(text("친구들의 소식", 16, 0xff69e8c0));
-        feed = text("", 13, 0xffc7d0d9);
-        feed.setPadding(0, padding / 2, 0, padding / 2);
-        feed.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        layout.addView(feed);
-        layout.addView(text("허기점수 · 몸무게 변화 보기", 13, 0xffa6b0bb));
-        LinearLayout historyButtons = new LinearLayout(this);
-        for (int i = 0; i < DemoFriends.NAMES.length; i++) {
-            final int friend = i;
-            Button button = new Button(this);
-            button.setText(DemoFriends.NAMES[i] + " 이력");
-            button.setTextSize(12);
-            button.setOnClickListener(view -> startActivity(new android.content.Intent(
-                    this, DailyHistoryActivity.class).putExtra("friend", friend)));
-            historyButtons.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
-        }
-        layout.addView(historyButtons);
+        feedScroll = new android.widget.ScrollView(this);
+        feed = new LinearLayout(this);
+        feed.setOrientation(LinearLayout.VERTICAL);
+        feedScroll.addView(feed);
+        layout.addView(feedScroll, new LinearLayout.LayoutParams(-1,
+                (int) (150 * getResources().getDisplayMetrics().density)));
+        Button histories = new Button(this);
+        histories.setText("친구별 점수·몸무게 이력 ›");
+        histories.setOnClickListener(view -> new android.app.AlertDialog.Builder(this)
+                .setTitle("친구 기록 보기")
+                .setItems(DemoFriends.NAMES, (dialog, friend) -> startActivity(
+                        new android.content.Intent(this, DailyHistoryActivity.class)
+                                .putExtra("friend", friend))).show());
+        layout.addView(histories);
         Button record = new Button(this);
         record.setText("내 상태 기록하기");
         record.setOnClickListener(view -> {
@@ -78,7 +87,9 @@ public class FriendsActivity extends Activity {
             finish();
         });
         layout.addView(record);
-        setContentView(layout);
+        android.widget.ScrollView page = new android.widget.ScrollView(this);
+        page.addView(layout);
+        setContentView(page);
     }
 
     private TextView text(String value, int size, int color) {
@@ -97,33 +108,75 @@ public class FriendsActivity extends Activity {
 
     @Override protected void onPause() {
         handler.removeCallbacks(refresh);
+        bars.stop();
+        for (int i = 0; i < bars.positions.length; i++) bars.positions[i] = Math.max(1, bars.targets[i]);
         super.onPause();
     }
 
     private class Bars extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final float[] positions = {1, 1, 1, 1};
+        private int[] targets = {-1, -1, -1, -1};
+        private android.animation.ValueAnimator movement;
+
         Bars() { super(FriendsActivity.this); }
+
+        void stop() {
+            if (movement != null) movement.cancel();
+        }
+
+        void setStates(long now) {
+            JSONArray points = History.read(FriendsActivity.this);
+            JSONArray own = points.optJSONArray(points.length() - 1);
+            int[] next = new int[4];
+            next[0] = own == null ? -1 : 6 - own.optInt(1);
+            for (int i = 1; i < next.length; i++) next[i] = 6 - DemoFriends.state(i - 1, now);
+            if (java.util.Arrays.equals(targets, next)) return;
+            stop();
+            targets = next;
+            float[] from = positions.clone();
+            movement = android.animation.ValueAnimator.ofFloat(0, 1);
+            movement.setDuration(700);
+            movement.setInterpolator(new android.view.animation.DecelerateInterpolator());
+            movement.addUpdateListener(animation -> {
+                float fraction = (float) animation.getAnimatedValue();
+                for (int i = 0; i < positions.length; i++) {
+                    if (targets[i] >= 1) positions[i] = from[i] + (targets[i] - from[i]) * fraction;
+                }
+                invalidate();
+            });
+            movement.start();
+        }
 
         @Override protected void onDraw(Canvas canvas) {
             float dp = getResources().getDisplayMetrics().density;
             float top = 38 * dp, bottom = getHeight() - 82 * dp;
             if (bottom <= top) return;
             float lane = (getWidth() - 22 * dp) / 4;
-            long now = System.currentTimeMillis();
-            JSONArray points = History.read(FriendsActivity.this);
-            JSONArray own = points.optJSONArray(points.length() - 1);
             StringBuilder description = new StringBuilder("허기 상태. ");
             for (int i = 0; i < 4; i++) {
-                int index = i == 0 ? (own == null ? -1 : own.optInt(1)) : DemoFriends.state(i - 1, now);
+                int index = targets[i] < 1 ? -1 : 6 - targets[i];
                 String name = i == 0 ? "나" : DemoFriends.NAMES[i - 1];
                 float center = 22 * dp + lane * (i + 0.5f);
-                float half = Math.min(19 * dp, lane * 0.28f);
-                paint.setColor(0xff1e252c);
-                canvas.drawRoundRect(center - half, top, center + half, bottom, 9 * dp, 9 * dp, paint);
+                paint.setColor(0xff29323b);
+                canvas.drawRoundRect(center - 3 * dp, top, center + 3 * dp, bottom, 3 * dp, 3 * dp, paint);
+                for (int level = 1; level <= 6; level++) {
+                    float markY = bottom - (bottom - top) * (level - 1) / 5;
+                    paint.setColor(0xff52616b);
+                    canvas.drawCircle(center, markY, 2 * dp, paint);
+                }
                 if (index >= 0) {
-                    float fillTop = bottom - (bottom - top) * (6 - index) / 6;
-                    paint.setColor(i == 0 ? 0xff69e8c0 : 0xffb59aff);
-                    canvas.drawRoundRect(center - half, fillTop, center + half, bottom, 9 * dp, 9 * dp, paint);
+                    float orbY = bottom - (bottom - top) * (positions[i] - 1) / 5;
+                    int color = i == 0 ? 0xff69e8c0 : 0xffb59aff;
+                    paint.setColor(color);
+                    paint.setAlpha(35);
+                    canvas.drawCircle(center, orbY, 18 * dp, paint);
+                    paint.setAlpha(100);
+                    canvas.drawCircle(center, orbY, 12 * dp, paint);
+                    paint.setColor(color);
+                    canvas.drawCircle(center, orbY, 8 * dp, paint);
+                    paint.setColor(0xfff0fff9);
+                    canvas.drawCircle(center - 2 * dp, orbY - 2 * dp, 2.5f * dp, paint);
                 }
                 paint.setTextAlign(Paint.Align.CENTER);
                 paint.setColor(0xfff0f3f5);
@@ -146,7 +199,7 @@ public class FriendsActivity extends Activity {
             paint.setColor(0xff87949f);
             paint.setTextSize(10 * dp);
             for (int level = 1; level <= 6; level++) {
-                float ordinate = bottom - (bottom - top) * level / 6;
+                float ordinate = bottom - (bottom - top) * (level - 1) / 5;
                 canvas.drawText(String.valueOf(level), 0, ordinate + 3 * dp, paint);
             }
             setContentDescription(description);

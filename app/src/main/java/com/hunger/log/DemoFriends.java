@@ -29,6 +29,12 @@ final class DemoFriends {
     static String message(long tick) {
         return NAMES[friend(tick)] + "님이 " + SENTENCES[value(tick)];
     }
+    static String feedMessage(long tick) {
+        String time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.KOREA)
+                .format(new java.util.Date(tick * INTERVAL));
+        return NAMES[friend(tick)] + " · " + time + (char) 10 + SENTENCES[value(tick)];
+    }
+
     static org.json.JSONArray recordsForDay(int friend, long day) {
         java.util.Calendar date = java.util.Calendar.getInstance();
         date.setTimeInMillis(day);

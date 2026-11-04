@@ -106,7 +106,11 @@ public class HomeWidget extends AppWidgetProvider {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.widget);
         int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
         org.json.JSONArray points = History.read(context);
-        view.setTextViewText(R.id.friendMessage, DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())));
+        long tick = DemoFriends.tick(System.currentTimeMillis());
+        int[] messageIds = {R.id.friendMessage0, R.id.friendMessage1, R.id.friendMessage2};
+        for (int i = 0; i < messageIds.length; i++) {
+            view.setTextViewText(messageIds[i], DemoFriends.feedMessage(tick - 2 + i));
+        }
         view.setOnClickPendingIntent(R.id.friendPanel, PendingIntent.getActivity(context, 10,
                 new Intent(context, FriendsActivity.class), flags));
         view.setContentDescription(R.id.friendPanel, "가상 친구 소식. " +
