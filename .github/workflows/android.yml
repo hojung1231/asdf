@@ -9,8 +9,31 @@ jobs:
     concurrency:
       group: huggy-release
       cancel-in-progress: false
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: huggy-ci-only
+          POSTGRES_DB: huggy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      HUGGY_SUPABASE_URL: ${{ secrets.HUGGY_SUPABASE_URL }}
+      HUGGY_SUPABASE_KEY: ${{ secrets.HUGGY_SUPABASE_KEY }}
     steps:
       - uses: actions/checkout@v4
+      - name: Test social database permissions and retry behavior
+        env:
+          PGPASSWORD: huggy-ci-only
+        run: |
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611040001_social.sql
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/tests/permissions.sql
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -41,6 +64,7 @@ jobs:
           name: HUGGY
           path: HUGGY-*.apk
       - name: Publish APK download
+        if: env.HUGGY_SUPABASE_URL != '' && env.HUGGY_SUPABASE_KEY != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

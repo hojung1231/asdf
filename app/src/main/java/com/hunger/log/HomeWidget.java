@@ -13,24 +13,24 @@ public class HomeWidget extends AppWidgetProvider {
 
     private static final android.os.Handler FRAMES = new android.os.Handler(android.os.Looper.getMainLooper());
 
-    private static final String DEMO_TICK = "com.hunger.log.DEMO_TICK";
+    private static final String FRIEND_TICK = "com.hunger.log.DEMO_TICK";
 
     private static PendingIntent demoIntent(Context context) {
         return PendingIntent.getBroadcast(context, 100,
-                new Intent(context, HomeWidget.class).setAction(DEMO_TICK),
+                new Intent(context, HomeWidget.class).setAction(FRIEND_TICK),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private static void scheduleDemo(Context context) {
+    private static void scheduleUpdates(Context context) {
         android.app.AlarmManager alarms = (android.app.AlarmManager)
                 context.getSystemService(Context.ALARM_SERVICE);
         alarms.setInexactRepeating(android.app.AlarmManager.ELAPSED_REALTIME,
-                android.os.SystemClock.elapsedRealtime() + DemoFriends.INTERVAL,
-                DemoFriends.INTERVAL, demoIntent(context));
+                android.os.SystemClock.elapsedRealtime() + 60_000L,
+                60_000L, demoIntent(context));
     }
 
     @Override public void onEnabled(Context context) {
-        scheduleDemo(context);
+        scheduleUpdates(context);
     }
 
     @Override public void onDisabled(Context context) {
@@ -40,19 +40,20 @@ public class HomeWidget extends AppWidgetProvider {
     }
 
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        scheduleDemo(context);
+        scheduleUpdates(context);
         refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
                                                      int id, android.os.Bundle options) {
-        scheduleDemo(context);
+        scheduleUpdates(context);
         refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (DEMO_TICK.equals(intent.getAction())) {
+        if (FRIEND_TICK.equals(intent.getAction())) {
+            if (SocialClient.configured()) SocialSync.schedule(context);
             if (!flying) refresh(context, "HUGGY · 친구 소식 갱신", -1);
             return;
         }
@@ -106,15 +107,16 @@ public class HomeWidget extends AppWidgetProvider {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.widget);
         int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
         org.json.JSONArray points = History.read(context);
-        long tick = DemoFriends.tick(System.currentTimeMillis());
+        org.json.JSONArray feed = SocialClient.cached(context).optJSONArray("feed");
         int[] messageIds = {R.id.friendMessage0, R.id.friendMessage1, R.id.friendMessage2};
         for (int i = 0; i < messageIds.length; i++) {
-            view.setTextViewText(messageIds[i], DemoFriends.feedMessage(tick - 2 + i));
+            org.json.JSONObject event = feed == null ? null : feed.optJSONObject(i);
+            view.setViewVisibility(messageIds[i], event != null || i == 0 ? android.view.View.VISIBLE : android.view.View.GONE);
+            view.setTextViewText(messageIds[i], event == null ? "새 친구 소식이 없습니다." : SocialClient.feedMessage(event));
         }
         view.setOnClickPendingIntent(R.id.friendPanel, PendingIntent.getActivity(context, 10,
                 new Intent(context, MainActivity.class), flags));
-        view.setContentDescription(R.id.friendPanel, "가상 친구 소식. " +
-                DemoFriends.message(DemoFriends.tick(System.currentTimeMillis())) + ". 함께 보기 열기");
+        view.setContentDescription(R.id.friendPanel, "친구 소식. 함께 보기 열기");
         view.setTextViewText(R.id.weight, WeightHistory.todayLabel(context));
         view.setOnClickPendingIntent(R.id.weight, PendingIntent.getActivity(context, 20,
                 new Intent(context, WeightActivity.class), flags));

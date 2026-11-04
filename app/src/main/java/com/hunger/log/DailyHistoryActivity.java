@@ -14,13 +14,11 @@ public class DailyHistoryActivity extends Activity {
     private TextView heading;
     private LinearLayout rows;
     private Button next;
-    private int friend = -1;
+
     private TextView summary;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        friend = getIntent().getIntExtra("friend", -1);
-        if (friend < 0 || friend >= DemoFriends.NAMES.length) friend = -1;
         month.set(java.util.Calendar.DAY_OF_MONTH, 1);
         if (state != null) month.setTimeInMillis(state.getLong("month", month.getTimeInMillis()));
         LinearLayout layout = new LinearLayout(this);
@@ -33,8 +31,8 @@ public class DailyHistoryActivity extends Activity {
         TextView rule = new TextView(this);
         rule.setText("매일 첫 기록~마지막 기록의 시간 평균 기준" + (char) 10
                 + "평균 2 이하 100점 · 3이면 50점 · 4 이상 0점");
-        if (friend >= 0) rule.append((char) 10 + "가상 친구의 예시 기록");
-        if (friend < 0) rule.append((char) 10 + "날짜를 누르면 몸무게 입력·수정");
+
+        rule.append((char) 10 + "날짜를 누르면 몸무게 입력·수정");
         layout.addView(rule);
         LinearLayout navigation = new LinearLayout(this);
         addButton(navigation, "‹ 이전 달", () -> { month.add(java.util.Calendar.MONTH, -1); render(); });
@@ -70,7 +68,7 @@ public class DailyHistoryActivity extends Activity {
     }
 
     private void render() {
-        heading.setText((friend < 0 ? "나의 기록 · " : DemoFriends.NAMES[friend] + " · 데모" + (char) 10) + new java.text.SimpleDateFormat("yyyy년 M월 · 매일의 기록", java.util.Locale.KOREA)
+        heading.setText("나의 기록 · " + new java.text.SimpleDateFormat("yyyy년 M월 · 매일의 기록", java.util.Locale.KOREA)
                 .format(month.getTime()));
         java.util.Calendar today = java.util.Calendar.getInstance();
         int currentMonth = today.get(java.util.Calendar.YEAR) * 12 + today.get(java.util.Calendar.MONTH);
@@ -91,21 +89,16 @@ public class DailyHistoryActivity extends Activity {
             start.set(java.util.Calendar.MILLISECOND, 0);
             java.util.Calendar end = (java.util.Calendar) start.clone();
             end.add(java.util.Calendar.DAY_OF_MONTH, 1);
-            JSONArray daily = friend < 0
-                    ? History.inPeriod(points, start.getTimeInMillis(), end.getTimeInMillis())
-                    : DemoFriends.recordsForDay(friend, start.getTimeInMillis());
+            JSONArray daily = History.inPeriod(points, start.getTimeInMillis(), end.getTimeInMillis());
             int score = History.todayScore(daily);
             String value = weights.optString(WeightHistory.dateKey(start.getTimeInMillis()), "");
-            if (friend >= 0) value = DemoFriends.weightForDay(friend, start.getTimeInMillis());
             if (!value.isEmpty()) {
                 if (newestWeight == null) newestWeight = value;
                 oldestWeight = value;
             }
             java.util.Calendar yesterday = (java.util.Calendar) start.clone();
             yesterday.add(java.util.Calendar.DAY_OF_MONTH, -1);
-            String previousWeight = friend < 0
-                    ? weights.optString(WeightHistory.dateKey(yesterday.getTimeInMillis()), "")
-                    : DemoFriends.weightForDay(friend, yesterday.getTimeInMillis());
+            String previousWeight = weights.optString(WeightHistory.dateKey(yesterday.getTimeInMillis()), "");
             TextView row = new TextView(this);
             row.setTextSize(16);
             int pad = (int) (14 * getResources().getDisplayMetrics().density);
@@ -121,7 +114,7 @@ public class DailyHistoryActivity extends Activity {
                         6 - means[means.length - 1], daily.length());
             }
             row.setText(WeightHistory.dateKey(start.getTimeInMillis()) + "   " + scoreLabel + (char) 10 + detail);
-            if (friend < 0) {
+            {
                 long date = start.getTimeInMillis();
                 row.setOnClickListener(view -> startActivity(new android.content.Intent(
                         this, WeightActivity.class).putExtra("date", date)));

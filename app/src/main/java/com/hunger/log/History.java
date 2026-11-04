@@ -81,7 +81,10 @@ final class History {
         }
         points.put(new JSONArray().put(now).put(value));
         boolean saved = context.getSharedPreferences("history", 0).edit()
-                .putString("points", points.toString()).commit();
+                .putString("points", points.toString())
+                .putLong("social_change", Math.max(System.currentTimeMillis(),
+                        context.getSharedPreferences("history", 0).getLong("social_change", 0) + 1)).commit();
+        if (saved) SocialClient.recordChanged(context);
         return saved ? (revised ? "✓ 최근 기록 수정" : "✦ 그래프에 기록 추가") : "저장 실패 · 다시 눌러 주세요";
     }
 }

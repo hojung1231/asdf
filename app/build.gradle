@@ -2,6 +2,7 @@ plugins { id 'com.android.application' version '8.7.3' }
 android {
     namespace 'com.hunger.log'
     compileSdk 35
+    buildFeatures { buildConfig true }
     signingConfigs {
         debug {
             storeFile file(System.getenv('HOME') + '/.android/debug.keystore')
@@ -11,11 +12,13 @@ android {
         }
     }
     defaultConfig {
+        buildConfigField 'String', 'SUPABASE_URL', groovy.json.JsonOutput.toJson(System.getenv('HUGGY_SUPABASE_URL') ?: '')
+        buildConfigField 'String', 'SUPABASE_KEY', groovy.json.JsonOutput.toJson(System.getenv('HUGGY_SUPABASE_KEY') ?: '')
         applicationId 'com.hunger.log'
         minSdk 23
         targetSdk 32
-        versionCode 13
-        versionName '1.9'
+        versionCode 14
+        versionName '2.0'
     }
 }
 dependencies {
