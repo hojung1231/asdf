@@ -73,15 +73,15 @@ final class SocialClient {
         return saved.getString("access_token");
     }
 
-    boolean authenticate(String email, String password, boolean register) throws Exception {
-        JSONObject result = request(register ? "/auth/v1/signup" : "/auth/v1/token?grant_type=password",
-                new JSONObject().put("email", email.trim()).put("password", password), null);
-        if (!result.has("refresh_token")) return false;
-        SocialStore.clear(context);
-        saveSession(result);
-        return true;
+    void createDeviceAccount(String nickname) throws Exception {
+        if (!signedIn()) {
+            JSONObject result = request("/auth/v1/signup", new JSONObject(), null);
+            if (!result.has("refresh_token")) throw new java.io.IOException("기기 계정 설정을 확인해 주세요.");
+            saveSession(result);
+        }
+        updateProfile(nickname, false);
+        snapshot();
     }
-
     JSONObject rpc(String name, JSONObject arguments) throws Exception {
         return request("/rest/v1/rpc/" + name, arguments, token());
     }

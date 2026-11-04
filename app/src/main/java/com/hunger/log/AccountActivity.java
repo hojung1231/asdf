@@ -3,7 +3,7 @@ package com.hunger.log;
 import android.app.Activity;
 import android.os.Bundle;
 import android.text.InputType;
-import android.view.View;
+
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -71,6 +71,10 @@ public class AccountActivity extends Activity {
             message.setText("친구 서버 연결을 준비 중입니다. 몸무게와 내 기록은 계속 휴대폰에 저장됩니다.");
             return;
         }
+        action = new Button(this);
+        action.setText("다시 확인");
+        action.setOnClickListener(view -> recreate());
+        layout.addView(action);
         run(() -> {
             SocialClient client = new SocialClient(this);
             if (client.signedIn()) {
@@ -81,44 +85,36 @@ public class AccountActivity extends Activity {
         });
     }
 
-    private void loginForm() {
-        if (isFinishing() || isDestroyed()) return;
-        message.setText("이메일로 가입한 뒤 인증 메일을 확인하고 로그인하세요.");
-        EditText email = field("이메일", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        EditText password = field("비밀번호 · 8자 이상", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        action = new Button(this);
-        action.setText("로그인");
-        alternate = new Button(this);
-        alternate.setText("회원가입");
-        View.OnClickListener authenticate = view -> {
-            boolean register = view == alternate;
-            String secret = password.getText().toString();
-            String address = email.getText().toString().trim();
-            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(address).matches()) {
-                email.setError("이메일 주소를 확인해 주세요."); return;
-            }
-            if (secret.length() < 8) { password.setError("8자 이상 입력하세요."); return; }
-            run(() -> {
-                SocialClient client = new SocialClient(this);
-                if (client.authenticate(address, secret, register)) {
-                    JSONObject profile = client.profile();
-                    SocialStore.write(this, "profile", profile);
-                    main.post(() -> { recreate(); });
-                } else main.post(() -> {
-                    password.setText("");
-                    message.setText("인증 메일을 확인한 뒤 로그인하세요. 이미 가입했다면 로그인을 선택하세요.");
-                });
-            });
-        };
-        action.setOnClickListener(authenticate);
-        alternate.setOnClickListener(authenticate);
-        layout.addView(action);
-        layout.addView(alternate);
+    private void resetForm() {
+        while (layout.getChildCount() > 2) layout.removeViewAt(2);
+        action = null;
+        alternate = null;
     }
 
+    private void loginForm() {
+        if (isFinishing() || isDestroyed()) return;
+        resetForm();
+        message.setText("닉네임으로 시작하세요. 계정은 이 기기에 보관되며 앱 삭제·데이터 삭제 시 복구할 수 없습니다.");
+        EditText nickname = field("닉네임 · 24자 이내", InputType.TYPE_CLASS_TEXT);
+        action = new Button(this);
+        action.setText("닉네임으로 시작");
+        action.setOnClickListener(view -> {
+            String name = nickname.getText().toString().trim();
+            if (name.isEmpty() || name.length() > 24) {
+                nickname.setError("닉네임은 1~24자로 입력하세요.");
+                return;
+            }
+            run(() -> {
+                new SocialClient(this).createDeviceAccount(name);
+                main.post(this::recreate);
+            });
+        });
+        layout.addView(action);
+    }
     private void profileForm(JSONObject profile) {
         if (isFinishing() || isDestroyed()) return;
-        message.setText("친구에게 아래 코드를 알려주세요.");
+        resetForm();
+        message.setText("기기 계정 · 앱 삭제·데이터 삭제 시 계정이 사라집니다. 친구에게 아래 코드를 알려주세요.");
         TextView code = label("내 친구 코드" + (char) 10 + profile.optString("friend_code"), 18);
         code.setTextIsSelectable(true);
         Button share = new Button(this);
@@ -154,12 +150,15 @@ public class AccountActivity extends Activity {
         });
         layout.addView(action);
         alternate = new Button(this);
-        alternate.setText("로그아웃");
-        alternate.setOnClickListener(view -> run(() -> {
-            new SocialClient(this).logout();
-            HomeWidget.refresh(this, "로그아웃", -1);
-            main.post(this::recreate);
-        }));
+        alternate.setText("기기 계정에서 나가기");
+        alternate.setOnClickListener(view -> new android.app.AlertDialog.Builder(this)
+                .setMessage("이 계정으로 다시 돌아올 수 없습니다. 기기 계정에서 나갈까요?")
+                .setNegativeButton("취소", null)
+                .setPositiveButton("나가기", (dialog, which) -> run(() -> {
+                    new SocialClient(this).logout();
+                    HomeWidget.refresh(this, "기기 계정 연결 해제", -1);
+                    main.post(this::recreate);
+                })).show());
         layout.addView(alternate);
     }
 }
