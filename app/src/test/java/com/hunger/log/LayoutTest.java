@@ -18,6 +18,29 @@ import static org.junit.Assert.*;
 @Config(sdk = 28)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class LayoutTest {
+    @org.junit.Before public void keepLayoutTestsOffline() {
+        AppUpdates.prefs(org.robolectric.RuntimeEnvironment.getApplication()).edit()
+                .clear().putLong("attempt", System.currentTimeMillis()).commit();
+    }
+
+    @Test public void updateButtonAppearsOnlyForANewerVersionInBothWidgetSizes() throws Exception {
+        android.content.Context context = org.robolectric.RuntimeEnvironment.getApplication();
+        for (int code : new int[]{BuildConfig.VERSION_CODE - 1, BuildConfig.VERSION_CODE, BuildConfig.VERSION_CODE + 1}) {
+            org.json.JSONObject release = new org.json.JSONObject().put("versionCode", code)
+                    .put("versionName", "2.3").put("url", AppUpdates.BASE + "download/huggy-v2.3/HUGGY-2.3.apk")
+                    .put("sha256", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+            AppUpdates.prefs(context).edit().putString("release", release.toString()).commit();
+            for (int layout : new int[]{R.layout.widget, R.layout.widget_compact}) {
+                android.widget.FrameLayout parent = new android.widget.FrameLayout(context);
+                View root = android.view.LayoutInflater.from(context).inflate(layout, parent, false);
+                AppUpdates.bind(context, root);
+                measure(root, 250, layout == R.layout.widget ? 520 : 320);
+                assertEquals(code > BuildConfig.VERSION_CODE ? View.VISIBLE : View.GONE, root.findViewById(R.id.update).getVisibility());
+                assertTrue(root.findViewById(R.id.brand).getMeasuredWidth() > 0);
+                assertTrue(root.findViewById(R.id.plot).getMeasuredHeight() > 0);
+            }
+        }
+    }
     private void measure(View view, int width, int height) {
         float density = view.getResources().getDisplayMetrics().density;
         int pixelsWide = Math.round(width * density);

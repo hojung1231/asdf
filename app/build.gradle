@@ -18,11 +18,12 @@ android {
         applicationId 'com.hunger.log'
         minSdk 23
         targetSdk 32
-        versionCode 16
-        versionName '2.1.1'
+        versionCode 17
+        versionName '2.2'
     }
 }
 dependencies {
+    implementation 'androidx.core:core:1.13.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'
     testImplementation 'org.json:json:20240303'

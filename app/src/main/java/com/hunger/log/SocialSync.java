@@ -26,6 +26,7 @@ public class SocialSync extends JobService {
     @Override public boolean onStartJob(JobParameters parameters) {
         stopped = false;
         SocialClient.EXECUTOR.execute(() -> {
+            AppUpdates.checkIfDue(this);
             boolean retry = false;
             try {
                 SocialClient client = new SocialClient(this);

@@ -21,11 +21,14 @@ public class MainActivity extends Activity {
     private android.widget.ScrollView friendScroll;
     private android.widget.ViewFlipper tabs;
     private RecordPane recordPane;
+    private Button updateButton;
     private Button recordsTab;
     private Button friendsTab;
     private TextView message;
     private boolean loading;
     private boolean visible;
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener updateListener =
+            (preferences, key) -> { if ("release".equals(key) && visible) handler.post(this::render); };
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
             render();
@@ -75,6 +78,12 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this);
         header.setGravity(android.view.Gravity.CENTER_VERTICAL);
         header.addView(text("HUGGY.", 23, 0xff69e8c0), new LinearLayout.LayoutParams(0, -2, 1));
+        updateButton = new Button(this);
+        updateButton.setText("↑ 업데이트");
+        updateButton.setTextSize(11);
+        updateButton.setVisibility(View.GONE);
+        updateButton.setOnClickListener(v -> startActivity(new android.content.Intent(this, UpdateActivity.class)));
+        header.addView(updateButton);
         Button add = new Button(this);
         add.setText("＋ 친구");
         add.setTextSize(13);
@@ -158,6 +167,7 @@ public class MainActivity extends Activity {
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
     private void render() {
+        if (updateButton != null) updateButton.setVisibility(tabs.getDisplayedChild() == 1 && AppUpdates.available(this) != null ? View.VISIBLE : View.GONE);
         if (recordPane != null) recordPane.refresh();
         JSONArray members = SocialClient.cached(this).optJSONArray("members");
         JSONObject own = new JSONObject();
@@ -224,6 +234,7 @@ public class MainActivity extends Activity {
 
     private void showMenu(View anchor) {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, anchor);
+        popup.getMenu().add(0, 7, 6, "업데이트 확인 · " + BuildConfig.VERSION_NAME);
         popup.getMenu().add(0, 1, 0, "계정·공유 설정");
         popup.getMenu().add(0, 2, 1, WeightHistory.todayLabel(this));
         popup.getMenu().add(0, 3, 2, "매일의 점수·몸무게");
@@ -231,6 +242,7 @@ public class MainActivity extends Activity {
         popup.getMenu().add(0, 6, 4, "허기 기록 수정");
         popup.getMenu().add(0, 5, 5, "허기 기록 초기화");
         popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 7) startActivity(new android.content.Intent(this, UpdateActivity.class));
             if (item.getItemId() == 1) startActivity(new android.content.Intent(this, AccountActivity.class));
             if (item.getItemId() == 2) startActivity(new android.content.Intent(this, WeightActivity.class));
             if (item.getItemId() == 3) startActivity(new android.content.Intent(this, DailyHistoryActivity.class));
@@ -264,12 +276,15 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         visible = true;
+        AppUpdates.prefs(this).registerOnSharedPreferenceChangeListener(updateListener);
+        AppUpdates.check(this);
         handler.removeCallbacks(refresh);
         refresh.run();
     }
 
     @Override protected void onPause() {
         visible = false;
+        AppUpdates.prefs(this).unregisterOnSharedPreferenceChangeListener(updateListener);
         recordPane.stop();
         handler.removeCallbacks(refresh);
         for (PersonColumn column : columns.values()) column.rail.stop();

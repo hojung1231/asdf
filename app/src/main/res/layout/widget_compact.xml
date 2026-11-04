@@ -1,6 +1,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_background">
 <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:padding="10dp" android:orientation="vertical">
-<TextView android:id="@+id/brand" android:layout_width="match_parent" android:layout_height="20dp" android:text="HUGGY 미니" android:textStyle="bold" android:letterSpacing="0.12" android:textSize="14sp" android:textColor="#69E8C0"/>
+<LinearLayout android:layout_width="match_parent" android:layout_height="20dp" android:orientation="horizontal">
+<TextView android:id="@+id/brand" android:layout_width="0dp" android:layout_weight="1" android:layout_height="20dp" android:text="HUGGY 미니" android:textStyle="bold" android:letterSpacing="0.12" android:textSize="14sp" android:textColor="#69E8C0"/>
+<TextView android:id="@+id/update" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:paddingLeft="8dp" android:paddingRight="8dp" android:text="↑ 업데이트" android:textSize="11sp" android:textColor="#101317" android:backgroundTint="#69E8C0" android:background="@drawable/widget_button" android:visibility="gone"/>
+</LinearLayout>
 <LinearLayout android:layout_width="match_parent" android:layout_height="36dp">
 <TextView android:id="@+id/current" android:layout_width="0dp" android:layout_weight="1.1" android:layout_height="match_parent" android:textColor="#F0F3F5" android:textSize="12sp" android:gravity="center_vertical"/>
 <TextView android:id="@+id/mean" android:layout_width="0dp" android:layout_weight="0.8" android:layout_height="match_parent" android:textColor="#B59AFF" android:textSize="11sp" android:gravity="center"/>

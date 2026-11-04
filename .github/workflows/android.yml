@@ -60,6 +60,9 @@ jobs:
           version=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
           cp app/build/outputs/apk/debug/app-debug.apk "HUGGY-$version.apk"
           echo "HUGGY_VERSION=$version" >> "$GITHUB_ENV"
+          code=$(sed -n 's/.*versionCode \([0-9]*\).*/\1/p' app/build.gradle)
+          sha=$(sha256sum "HUGGY-$version.apk" | cut -d ' ' -f1)
+          jq -n --argjson code "$code" --arg name "$version" --arg sha "$sha" --arg url "https://github.com/hojung1231/asdf/releases/download/huggy-v$version/HUGGY-$version.apk" '{versionCode:$code, versionName:$name, sha256:$sha, url:$url}' > huggy-update.json
       - uses: actions/upload-artifact@v4
         with:
           name: HUGGY
@@ -71,6 +74,6 @@ jobs:
         run: |
           tag="huggy-v$HUGGY_VERSION"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --title "HUGGY $HUGGY_VERSION" --notes "Install the APK from Assets. This release starts permanent signing. Earlier installations must be removed once. Removing the old app deletes its saved records."
+            gh release create "$tag" --target "$GITHUB_SHA" --title "HUGGY $HUGGY_VERSION" --notes "Update HUGGY without removing the installed app. Records and account are preserved. Starting with 2.2, new releases can be installed from the update button in HUGGY or its widgets."
           fi
-          gh release upload "$tag" "HUGGY-$HUGGY_VERSION.apk" --clobber
+          gh release upload "$tag" "HUGGY-$HUGGY_VERSION.apk" huggy-update.json --clobber

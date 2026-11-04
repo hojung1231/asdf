@@ -44,19 +44,21 @@ public class HomeWidget extends AppWidgetProvider {
 
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         scheduleUpdates(context);
+        AppUpdates.check(context);
         refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
                                                      int id, android.os.Bundle options) {
         scheduleUpdates(context);
+        AppUpdates.check(context);
         refresh(context, "HUGGY · 그래프 열기", -1);
     }
 
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
         if (FRIEND_TICK.equals(intent.getAction())) {
-            if (SocialClient.configured()) SocialSync.schedule(context);
+            SocialSync.schedule(context);
             if (!flying) refresh(context, "HUGGY · 친구 소식 갱신", -1);
             return;
         }
@@ -111,6 +113,10 @@ public class HomeWidget extends AppWidgetProvider {
             boolean compact = kind == 1;
             RemoteViews view = new RemoteViews(context.getPackageName(), compact ? R.layout.widget_compact : R.layout.widget);
             int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
+            AppUpdates.Release update = AppUpdates.available(context);
+            view.setViewVisibility(R.id.update, update == null ? android.view.View.GONE : android.view.View.VISIBLE);
+            view.setOnClickPendingIntent(R.id.update, PendingIntent.getActivity(context, 30,
+                    new Intent(context, UpdateActivity.class), flags));
             org.json.JSONArray points = History.read(context);
             org.json.JSONArray feed = SocialClient.cached(context).optJSONArray("feed");
             int[] messageIds = {R.id.friendMessage0, R.id.friendMessage1, R.id.friendMessage2};

@@ -75,6 +75,7 @@ final class RecordPane extends FrameLayout {
 
     void refresh() {
         Context context = getContext();
+        AppUpdates.bind(context, this);
         JSONArray points = History.read(context);
         JSONArray last = points.optJSONArray(points.length() - 1);
         ((TextView) findViewById(R.id.current)).setText(last == null || last.optLong(0) < History.todayStart()
