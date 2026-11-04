@@ -135,6 +135,25 @@ final class SocialClient {
         return result;
     }
 
+    JSONObject friendshipSnapshot() throws Exception {
+        JSONObject result = snapshot();
+        if (result.optInt("friendship_version") < 2)
+            throw new java.io.IOException("친구 승인 기능의 서버 업데이트를 준비 중입니다.");
+        return result;
+    }
+
+    JSONObject requestFriend(String code) throws Exception {
+        friendshipSnapshot();
+        JSONObject result = rpc("huggy_follow", new JSONObject().put("p_code", code));
+        snapshot();
+        return result;
+    }
+
+    void respondFriend(String user, boolean accept) throws Exception {
+        rpc("huggy_respond_friend", new JSONObject().put("p_user", user).put("p_accept", accept));
+        snapshot();
+    }
+
     void logout() throws Exception {
         JSONObject saved = session();
         if (saved.has("access_token")) {

@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     private Button updateButton;
     private Button recordsTab;
     private Button friendsTab;
+    private Button friendRequests;
     private TextView message;
     private boolean loading;
     private boolean visible;
@@ -115,7 +116,10 @@ public class MainActivity extends Activity {
         friendContent = new LinearLayout(this);
         friendContent.setOrientation(LinearLayout.VERTICAL);
         friendContent.addView(text("지금, 함께 어떤 상태인가요?", 21, 0xfff0f3f5));
-        friendContent.addView(text("공은 마지막 기록 위치 · 친구를 눌러 팔로우 관리", 12, 0xffa6b0bb));
+        friendContent.addView(text("공은 마지막 기록 위치 · 친구를 눌러 관리", 12, 0xffa6b0bb));
+        friendRequests = new Button(this);
+        friendRequests.setOnClickListener(v -> startActivity(new android.content.Intent(this, FriendRequestsActivity.class)));
+        friendContent.addView(friendRequests);
         android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
         people = new LinearLayout(this);
         people.setOrientation(LinearLayout.HORIZONTAL);
@@ -170,6 +174,15 @@ public class MainActivity extends Activity {
         if (updateButton != null) updateButton.setVisibility(tabs.getDisplayedChild() == 1 && AppUpdates.available(this) != null ? View.VISIBLE : View.GONE);
         if (recordPane != null) recordPane.refresh();
         JSONArray members = SocialClient.cached(this).optJSONArray("members");
+        JSONArray requests = SocialClient.cached(this).optJSONArray("requests");
+        int incoming = 0, outgoing = 0;
+        if (requests != null) for (int i = 0; i < requests.length(); i++) {
+            if (requests.optJSONObject(i).optBoolean("incoming")) incoming++; else outgoing++;
+        }
+        friendsTab.setText(incoming == 0 ? "함께 보기" : "함께 보기 · 요청 " + incoming);
+        friendRequests.setText("친구 요청 · 받은 " + incoming + " · 보낸 " + outgoing + "  ›");
+        friendRequests.setBackgroundTintList(android.content.res.ColorStateList.valueOf(incoming > 0 ? 0xff69e8c0 : 0xff252d35));
+        friendRequests.setTextColor(incoming > 0 ? 0xff101317 : 0xffe2e7ec);
         JSONObject own = new JSONObject();
         try {
             if (members != null) for (int i = 0; i < members.length(); i++) {
@@ -221,13 +234,16 @@ public class MainActivity extends Activity {
         android.widget.EditText code = new android.widget.EditText(this);
         code.setHint("친구 코드 16자리");
         code.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        new android.app.AlertDialog.Builder(this).setTitle("친구 팔로우").setView(code)
-                .setNegativeButton("취소", null).setPositiveButton("팔로우", (dialog, which) -> {
+        new android.app.AlertDialog.Builder(this).setTitle("친구 요청 보내기").setMessage("상대가 승인하면 서로 친구로 등록됩니다.").setView(code)
+                .setNegativeButton("취소", null).setPositiveButton("요청 보내기", (dialog, which) -> {
                     String value = code.getText().toString().trim();
                     if (!value.matches("[a-fA-F0-9]{16}")) { message.setText("친구 코드 16자리를 확인해 주세요."); return; }
                     remote(client -> {
-                        client.rpc("huggy_follow", new JSONObject().put("p_code", value));
-                        client.snapshot();
+                        JSONObject response = client.requestFriend(value);
+                        String result = response.optString("state");
+                        String notice = "friends".equals(result) ? "이미 친구입니다." : "incoming".equals(result)
+                                ? "상대가 먼저 요청했습니다. 친구 요청에서 승인해 주세요." : "친구 요청을 보냈습니다. 상대의 승인을 기다려 주세요.";
+                        handler.post(() -> android.widget.Toast.makeText(this, notice, android.widget.Toast.LENGTH_LONG).show());
                     });
                 }).show();
     }
@@ -319,7 +335,7 @@ public class MainActivity extends Activity {
                 if (person.optBoolean("own")) return;
                 new android.app.AlertDialog.Builder(MainActivity.this).setTitle(person.optString("nickname"))
                         .setMessage(state.getText() + String.valueOf((char) 10) + time.getText())
-                        .setNegativeButton("닫기", null).setPositiveButton("팔로우 취소", (dialog, which) ->
+                        .setNegativeButton("닫기", null).setPositiveButton("친구 삭제", (dialog, which) ->
                                 remote(client -> {
                                     client.rpc("huggy_unfollow", new JSONObject().put("p_user", person.getString("user_id")));
                                     client.snapshot();

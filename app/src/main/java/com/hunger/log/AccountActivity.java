@@ -129,7 +129,7 @@ public class AccountActivity extends Activity {
         EditText name = field("닉네임 · 24자 이내", InputType.TYPE_CLASS_TEXT);
         name.setText(profile.optString("nickname"));
         CheckBox sharing = new CheckBox(this);
-        sharing.setText("내 코드를 알고 팔로우한 사람에게 현재 허기 상태와 기록 시각 공유");
+        sharing.setText("서로 승인한 친구에게 현재 허기 상태와 기록 시각 공유");
         sharing.setChecked(profile.optBoolean("sharing"));
         layout.addView(sharing);
         action = new Button(this);

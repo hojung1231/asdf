@@ -35,6 +35,10 @@ jobs:
           psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
           psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611040001_social.sql
           psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/tests/permissions.sql
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/tests/friendship_setup.sql
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261104110959_mutual_friend_requests.sql
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261104110959_mutual_friend_requests.sql
+          psql -h localhost -U postgres -d huggy_test -v ON_ERROR_STOP=1 -f supabase/tests/friendships.sql
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -67,8 +71,16 @@ jobs:
         with:
           name: HUGGY
           path: HUGGY-*.apk
+      - name: Check deployed friendship server
+        if: env.HUGGY_SOCIAL_READY == 'true'
+        run: |
+          if curl --fail --silent --show-error --max-time 20 "$HUGGY_SUPABASE_URL/rest/v1/rpc/huggy_health" -H "apikey: $HUGGY_SUPABASE_KEY" -H 'Content-Type: application/json' -d '{}' | jq -e '.version >= 2' >/dev/null; then
+            echo 'HUGGY_FRIENDSHIPS_READY=true' >> "$GITHUB_ENV"
+          else
+            echo 'Friend approval migration is pending. APK tested; public release held until the server is ready.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Publish APK download
-        if: env.HUGGY_SOCIAL_READY == 'true' && env.HUGGY_SUPABASE_URL != '' && env.HUGGY_SUPABASE_KEY != ''
+        if: env.HUGGY_SOCIAL_READY == 'true' && env.HUGGY_SUPABASE_URL != '' && env.HUGGY_SUPABASE_KEY != '' && env.HUGGY_FRIENDSHIPS_READY == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
