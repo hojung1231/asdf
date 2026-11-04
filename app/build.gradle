@@ -12,14 +12,21 @@ android {
             keyPassword 'android'
         }
     }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+            debuggable false
+            minifyEnabled false
+        }
+    }
     defaultConfig {
         buildConfigField 'String', 'SUPABASE_URL', groovy.json.JsonOutput.toJson(System.getenv('HUGGY_SUPABASE_URL') ?: '')
         buildConfigField 'String', 'SUPABASE_KEY', groovy.json.JsonOutput.toJson(System.getenv('HUGGY_SUPABASE_KEY') ?: '')
         applicationId 'com.hunger.log'
         minSdk 23
         targetSdk 32
-        versionCode 18
-        versionName '2.3'
+        versionCode 19
+        versionName '2.3.1'
     }
 }
 dependencies {

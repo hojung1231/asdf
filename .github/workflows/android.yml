@@ -54,15 +54,33 @@ jobs:
           mkdir -p ~/.android
           printf '%s' "$HUGGY_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
           chmod 600 ~/.android/debug.keystore
-      - run: gradle :app:testDebugUnitTest :app:assembleDebug --no-build-cache --rerun-tasks
-      - name: Verify permanent signing certificate
+      - run: gradle :app:testDebugUnitTest :app:testReleaseUnitTest :app:assembleRelease --no-build-cache --rerun-tasks
+      - name: Verify release configuration and permanent signing certificate
         run: |
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
-          digest=$("$signer" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+          apk=app/build/outputs/apk/release/app-release.apk
+          aapt="$(dirname "$signer")/aapt"
+          "$aapt" dump badging "$apk" > apk-badging.txt
+          if grep -q '^application-debuggable' apk-badging.txt; then
+            echo 'Debuggable APK is forbidden for public release.'; exit 1
+          fi
+          "$aapt" dump permissions "$apk" > apk-permissions.txt
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          permissions = set(re.findall(r"uses-permission(?:-sdk-23)?: name='([^']+)'", Path('apk-permissions.txt').read_text()))
+          expected = {'android.permission.INTERNET', 'android.permission.ACCESS_NETWORK_STATE',
+                      'android.permission.RECEIVE_BOOT_COMPLETED', 'android.permission.REQUEST_INSTALL_PACKAGES',
+                      'com.hunger.log.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'}
+          assert permissions <= expected, 'Unexpected permissions: ' + str(permissions - expected)
+          assert 'android.permission.INTERNET' in permissions
+          print('Verified release permission allowlist:', ', '.join(sorted(permissions)))
+          PY
+          digest=$("$signer" verify --print-certs "$apk" | sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
           test "$digest" = "29fb1185128ac4b625a3a5304145f614496fb317a9ec5b6d92e19e500cb2ffb5" || { echo "Signing certificate changed. Release blocked."; exit 1; }
           echo "Verified permanent HUGGY certificate: $digest" >> "$GITHUB_STEP_SUMMARY"
           version=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
-          cp app/build/outputs/apk/debug/app-debug.apk "HUGGY-$version.apk"
+          cp "$apk" "HUGGY-$version.apk"
           echo "HUGGY_VERSION=$version" >> "$GITHUB_ENV"
           code=$(sed -n 's/.*versionCode \([0-9]*\).*/\1/p' app/build.gradle)
           sha=$(sha256sum "HUGGY-$version.apk" | cut -d ' ' -f1)
