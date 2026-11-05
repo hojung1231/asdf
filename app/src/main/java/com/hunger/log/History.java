@@ -7,8 +7,11 @@ final class History {
     static final String[] LABELS = {"6. 몹시 배불러서 불쾌", "5. 만족스러운 배부름", "4. 약간 배부름", "3. 약간 허기짐", "2. 매우 허기짐", "1. 허기에 허덕임"};
 
     static JSONArray read(Context context) {
+        return read(context, Metric.HUNGER);
+    }
+    static JSONArray read(Context context, Metric metric) {
         try {
-            return new JSONArray(context.getSharedPreferences("history", 0).getString("points", "[]"));
+            return new JSONArray(context.getSharedPreferences(metric.preferences, 0).getString("points", "[]"));
         } catch (org.json.JSONException e) {
             throw new IllegalStateException(e);
         }
@@ -55,6 +58,9 @@ final class History {
         return "오늘의 허기점수\n" + face + " " + score + "점";
     }
     static double[] averages(JSONArray points) {
+        return averages(points, Metric.HUNGER);
+    }
+    static double[] averages(JSONArray points, Metric metric) {
         double[] result = new double[points.length()];
         double area = 0;
         for (int i = 0; i < points.length(); i++) {
@@ -63,7 +69,7 @@ final class History {
             JSONArray previous = points.optJSONArray(i - 1);
             double old = previous.optDouble(1);
             long duration = points.optJSONArray(i).optLong(0) - previous.optLong(0);
-            area += duration * (value > old ? (value + old) / 2 : old);
+            area += duration * (metric != Metric.HUNGER || value > old ? (value + old) / 2 : old);
             long elapsed = points.optJSONArray(i).optLong(0) - points.optJSONArray(0).optLong(0);
             result[i] = elapsed > 0 ? area / elapsed : value;
         }
@@ -80,10 +86,13 @@ final class History {
     }
 
     static synchronized boolean edit(Context context, int index, long time, int value) {
-        JSONArray points = read(context);
+        return edit(context, Metric.HUNGER, index, time, value);
+    }
+    static synchronized boolean edit(Context context, Metric metric, int index, long time, int value) {
+        JSONArray points = read(context, metric);
         if (!replaceValue(points, index, time, value)) return false;
-        boolean latest = index == points.length() - 1;
-        android.content.SharedPreferences preferences = context.getSharedPreferences("history", 0);
+        boolean latest = metric == Metric.HUNGER && index == points.length() - 1;
+        android.content.SharedPreferences preferences = context.getSharedPreferences(metric.preferences, 0);
         android.content.SharedPreferences.Editor editor = preferences.edit().putString("points", points.toString());
         if (latest) editor.putLong("social_change",
                 Math.max(System.currentTimeMillis(), preferences.getLong("social_change", 0) + 1));
@@ -92,7 +101,11 @@ final class History {
         return saved;
     }
     static synchronized String record(Context context, int value) {
-        JSONArray points = read(context);
+        return record(context, Metric.HUNGER, value);
+    }
+    static synchronized String record(Context context, Metric metric, int value) {
+        if (value < 0 || value >= 6) return "저장할 단계를 확인해 주세요";
+        JSONArray points = read(context, metric);
         long now = System.currentTimeMillis();
         JSONArray last = points.optJSONArray(points.length() - 1);
         boolean revised = last != null && now - last.optLong(0) < 60_000;
@@ -101,11 +114,11 @@ final class History {
             now = last.optLong(0);
         }
         points.put(new JSONArray().put(now).put(value));
-        boolean saved = context.getSharedPreferences("history", 0).edit()
-                .putString("points", points.toString())
-                .putLong("social_change", Math.max(System.currentTimeMillis(),
-                        context.getSharedPreferences("history", 0).getLong("social_change", 0) + 1)).commit();
-        if (saved) SocialClient.recordChanged(context);
+        android.content.SharedPreferences preferences = context.getSharedPreferences(metric.preferences, 0);
+        android.content.SharedPreferences.Editor editor = preferences.edit().putString("points", points.toString());
+        if (metric == Metric.HUNGER) editor.putLong("social_change", Math.max(System.currentTimeMillis(), preferences.getLong("social_change", 0) + 1));
+        boolean saved = editor.commit();
+        if (saved && metric == Metric.HUNGER) SocialClient.recordChanged(context);
         return saved ? (revised ? "✓ 최근 기록 수정" : "✦ 그래프에 기록 추가") : "저장 실패 · 다시 눌러 주세요";
     }
 }

@@ -16,9 +16,11 @@ public class DailyHistoryActivity extends BaseActivity {
     private Button next;
 
     private TextView summary;
+    private Metric metric;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        metric = Metric.from(getIntent().getIntExtra("metric", Metric.selected(this).ordinal()));
         month.set(java.util.Calendar.DAY_OF_MONTH, 1);
         if (state != null) month.setTimeInMillis(state.getLong("month", month.getTimeInMillis()));
         LinearLayout layout = new LinearLayout(this);
@@ -29,10 +31,10 @@ public class DailyHistoryActivity extends BaseActivity {
         heading.setTextSize(22);
         layout.addView(heading);
         TextView rule = new TextView(this);
-        rule.setText("매일 첫 기록~마지막 기록의 시간 평균 기준" + (char) 10
-                + "평균 2 이하 100점 · 3이면 50점 · 4 이상 0점");
+        rule.setText("매일 첫 기록~마지막 기록의 시간 평균 기준" + (char) 10 + (metric == Metric.STRESS
+                ? "일별 점수는 해당 날짜의 전체 기록 · 1=100점 / 6=0점" : metric.rule()));
 
-        rule.append((char) 10 + "날짜를 누르면 몸무게 입력·수정");
+        if (metric == Metric.HUNGER) rule.append((char) 10 + "날짜를 누르면 몸무게 입력·수정");
         layout.addView(rule);
         LinearLayout navigation = new LinearLayout(this);
         addButton(navigation, "‹ 이전 달", () -> { month.add(java.util.Calendar.MONTH, -1); render(); });
@@ -68,14 +70,14 @@ public class DailyHistoryActivity extends BaseActivity {
     }
 
     private void render() {
-        heading.setText("나의 기록 · " + new java.text.SimpleDateFormat("yyyy년 M월 · 매일의 기록", java.util.Locale.KOREA)
+        heading.setText(metric.title + " · " + new java.text.SimpleDateFormat("yyyy년 M월 · 매일의 기록", java.util.Locale.KOREA)
                 .format(month.getTime()));
         java.util.Calendar today = java.util.Calendar.getInstance();
         int currentMonth = today.get(java.util.Calendar.YEAR) * 12 + today.get(java.util.Calendar.MONTH);
         int selectedMonth = month.get(java.util.Calendar.YEAR) * 12 + month.get(java.util.Calendar.MONTH);
         next.setEnabled(selectedMonth < currentMonth);
         rows.removeAllViews();
-        JSONArray points = History.read(this);
+        JSONArray points = History.read(this, metric);
         JSONObject weights = WeightHistory.read(this);
         int days = month.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
         if (selectedMonth == currentMonth) days = today.get(java.util.Calendar.DAY_OF_MONTH);
@@ -90,7 +92,7 @@ public class DailyHistoryActivity extends BaseActivity {
             java.util.Calendar end = (java.util.Calendar) start.clone();
             end.add(java.util.Calendar.DAY_OF_MONTH, 1);
             JSONArray daily = History.inPeriod(points, start.getTimeInMillis(), end.getTimeInMillis());
-            int score = History.todayScore(daily);
+            int score = metric.score(daily, start.getTimeInMillis());
             String value = weights.optString(WeightHistory.dateKey(start.getTimeInMillis()), "");
             if (!value.isEmpty()) {
                 if (newestWeight == null) newestWeight = value;
@@ -103,18 +105,19 @@ public class DailyHistoryActivity extends BaseActivity {
             row.setTextSize(16);
             int pad = (int) (14 * getResources().getDisplayMetrics().density);
             row.setPadding(0, pad, 0, pad);
-            String scoreLabel = score < 0 ? "허기 기록 없음" : History.face(score) + " " + score + "점";
-            String detail = "몸무게 " + (value.isEmpty() ? "미입력" : value + " kg");
-            if (!value.isEmpty() && !previousWeight.isEmpty()) {
+            String scoreLabel = score < 0 ? metric.title + " 기록 없음" : History.face(score) + " " + score + "점";
+            String detail = metric == Metric.HUNGER ? "몸무게 " + (value.isEmpty() ? "미입력" : value + " kg") : (metric == Metric.FOCUS ? "08~17시 기록 구간" : "하루 전체 기록 구간");
+            if (metric == Metric.HUNGER && !value.isEmpty() && !previousWeight.isEmpty()) {
                 detail += "  ·  전일 대비 " + weightChange(previousWeight, value);
             }
-            if (daily.length() > 0) {
-                double[] means = History.averages(daily);
+            JSONArray eligible = metric.scorePoints(daily, start.getTimeInMillis());
+            if (eligible.length() > 0) {
+                double[] means = History.averages(eligible, metric);
                 detail += String.format(java.util.Locale.KOREA, "  ·  평균 %.2f  ·  %d회",
-                        6 - means[means.length - 1], daily.length());
+                        6 - means[means.length - 1], eligible.length());
             }
             row.setText(WeightHistory.dateKey(start.getTimeInMillis()) + "   " + scoreLabel + (char) 10 + detail);
-            {
+            if (metric == Metric.HUNGER) {
                 long date = start.getTimeInMillis();
                 row.setOnClickListener(view -> startActivity(new android.content.Intent(
                         this, WeightActivity.class).putExtra("date", date)));
@@ -127,8 +130,8 @@ public class DailyHistoryActivity extends BaseActivity {
             divider.setBackgroundColor(0xffdce4e0);
             rows.addView(divider, new LinearLayout.LayoutParams(-1, 1));
         }
-        summary.setText(newestWeight == null ? "이 달의 몸무게 기록이 없습니다."
-                : "이 달 기록 내 몸무게 변화 " + weightChange(oldestWeight, newestWeight));
+        summary.setText(metric == Metric.HUNGER ? (newestWeight == null ? "이 달의 몸무게 기록이 없습니다."
+                : "이 달 기록 내 몸무게 변화 " + weightChange(oldestWeight, newestWeight)) : metric.rule());
     }
 
     private String weightChange(String from, String to) {

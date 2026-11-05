@@ -115,7 +115,7 @@ public class MainActivity extends BaseActivity {
         friendScroll = new android.widget.ScrollView(this);
         friendContent = new LinearLayout(this);
         friendContent.setOrientation(LinearLayout.VERTICAL);
-        friendContent.addView(text("지금, 함께 어떤 상태인가요?", 21, 0xfff0f3f5));
+        friendContent.addView(text("친구들과 지금의 허기 상태", 21, 0xfff0f3f5));
         friendContent.addView(text("공은 마지막 기록 위치 · 친구를 눌러 관리", 12, 0xffa6b0bb));
         friendRequests = new Button(this);
         friendRequests.setOnClickListener(v -> startActivity(new android.content.Intent(this, FriendRequestsActivity.class)));
@@ -253,10 +253,10 @@ public class MainActivity extends BaseActivity {
         popup.getMenu().add(0, 7, 6, "업데이트 확인 · " + BuildConfig.VERSION_NAME);
         popup.getMenu().add(0, 1, 0, "계정·공유 설정");
         popup.getMenu().add(0, 2, 1, WeightHistory.todayLabel(this));
-        popup.getMenu().add(0, 3, 2, "매일의 점수·몸무게");
+        popup.getMenu().add(0, 3, 2, Metric.selected(this).title + " · 매일의 점수");
         popup.getMenu().add(0, 4, 3, "위젯 추가");
-        popup.getMenu().add(0, 6, 4, "허기 기록 수정");
-        popup.getMenu().add(0, 5, 5, "허기 기록 초기화");
+        popup.getMenu().add(0, 6, 4, Metric.selected(this).title + " 기록 수정");
+        popup.getMenu().add(0, 5, 5, Metric.selected(this).title + " 기록 초기화");
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 7) startActivity(new android.content.Intent(this, UpdateActivity.class));
             if (item.getItemId() == 1) startActivity(new android.content.Intent(this, AccountActivity.class));
@@ -269,9 +269,10 @@ public class MainActivity extends BaseActivity {
             }
             if (item.getItemId() == 6) startActivity(new android.content.Intent(this, RecordHistoryActivity.class));
             if (item.getItemId() == 5) {
-                new android.app.AlertDialog.Builder(this).setMessage("휴대폰의 허기 기록을 초기화할까요?")
+                Metric metric = Metric.selected(this);
+                new android.app.AlertDialog.Builder(this).setMessage("휴대폰의 " + metric.title + " 기록을 초기화할까요?")
                         .setNegativeButton("취소", null).setPositiveButton("초기화", (dialog, which) -> {
-                            if (getSharedPreferences("history", 0).edit().remove("points").commit()) {
+                            if (getSharedPreferences(metric.preferences, 0).edit().remove("points").commit()) {
                                 render();
                                 HomeWidget.refresh(this, "내 기록 초기화 완료", -1);
                             }

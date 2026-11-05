@@ -34,7 +34,7 @@ public class LayoutTest {
                 android.widget.FrameLayout parent = new android.widget.FrameLayout(context);
                 View root = android.view.LayoutInflater.from(context).inflate(layout, parent, false);
                 AppUpdates.bind(context, root);
-                measure(root, 250, layout == R.layout.widget ? 520 : 320);
+                measure(root, 250, layout == R.layout.widget ? 620 : 420);
                 assertEquals(code > BuildConfig.VERSION_CODE ? View.VISIBLE : View.GONE, root.findViewById(R.id.update).getVisibility());
                 assertTrue(root.findViewById(R.id.brand).getMeasuredWidth() > 0);
                 assertTrue(root.findViewById(R.id.plot).getMeasuredHeight() > 0);
@@ -54,9 +54,11 @@ public class LayoutTest {
         android.content.Context context = org.robolectric.RuntimeEnvironment.getApplication();
         RemoteViews remote = new RemoteViews(context.getPackageName(), R.layout.widget_compact);
         ViewGroup widget = (ViewGroup) remote.apply(context, null);
-        measure(widget, 300, 320);
+        measure(widget, 300, 420);
         ImageView plot = widget.findViewById(R.id.plot);
         assertTrue(plot.getMeasuredHeight() >= 40);
+        int previousBottom = -1;
+        int left = -1;
         for (int id : new int[]{R.id.b0, R.id.b1, R.id.b2, R.id.b3, R.id.b4, R.id.b5}) {
             View button = widget.findViewById(id);
             Rect bounds = new Rect(0, 0, button.getWidth(), button.getHeight());
@@ -64,6 +66,10 @@ public class LayoutTest {
             assertTrue(bounds.top >= 0);
             assertTrue(bounds.bottom <= widget.getHeight());
             assertTrue(button.getMeasuredWidth() > 0);
+            assertTrue(bounds.top > previousBottom);
+            if (left >= 0) assertEquals(left, bounds.left);
+            left = bounds.left;
+            previousBottom = bounds.bottom;
         }
     }
 
@@ -77,7 +83,7 @@ public class LayoutTest {
                 RecordPane pane = activity.findViewById(R.id.plot).getParent() instanceof RecordPane
                         ? (RecordPane) activity.findViewById(R.id.plot).getParent() : findPane(root);
                 assertNotNull(pane);
-                assertTrue(pane.getMeasuredHeight() >= pane.getResources().getDisplayMetrics().density * 520);
+                assertTrue(pane.getMeasuredHeight() >= pane.getResources().getDisplayMetrics().density * 620);
                 assertTrue(activity.findViewById(R.id.plot).getMeasuredHeight() > 0);
                 assertTrue(activity.findViewById(R.id.b5).getMeasuredHeight() > 0);
                 activity.selectTab(1);
@@ -97,6 +103,35 @@ public class LayoutTest {
             }
         }
         return null;
+    }
+
+    @Test public void metricTabsRecordAndReviseIndependentHistoriesWithoutChangingHungerSharing() {
+        android.content.Context context = org.robolectric.RuntimeEnvironment.getApplication();
+        long timestamp = History.todayStart() + 1000;
+        org.json.JSONArray original = new org.json.JSONArray().put(new org.json.JSONArray().put(timestamp).put(3));
+        context.getSharedPreferences("history", 0).edit().putString("points", original.toString()).putLong("social_change", 1234).commit();
+        context.getSharedPreferences("history_focus", 0).edit().clear().commit();
+        context.getSharedPreferences("history_stress", 0).edit().clear().commit();
+        Metric.HUNGER.select(context);
+        try (ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class).setup()) {
+            MainActivity activity = controller.get();
+            activity.findViewById(R.id.metric1).performClick();
+            activity.findViewById(R.id.b0).performClick();
+            activity.findViewById(R.id.b5).performClick();
+            org.json.JSONArray focus = History.read(context, Metric.FOCUS);
+            assertEquals(1, focus.length());
+            assertEquals(5, focus.optJSONArray(0).optInt(1));
+            assertTrue(History.edit(context, Metric.FOCUS, 0, focus.optJSONArray(0).optLong(0), 2));
+            assertEquals(2, History.read(context, Metric.FOCUS).optJSONArray(0).optInt(1));
+            activity.findViewById(R.id.metric2).performClick();
+            activity.findViewById(R.id.b0).performClick();
+            assertEquals(1, History.read(context, Metric.STRESS).length());
+            assertEquals(original.toString(), History.read(context).toString());
+            assertEquals(1234, context.getSharedPreferences("history", 0).getLong("social_change", 0));
+            activity.findViewById(R.id.metric0).performClick();
+            assertEquals(Metric.HUNGER, Metric.selected(context));
+            assertEquals(History.LABELS[0], ((android.widget.TextView) activity.findViewById(R.id.b0)).getText().toString());
+        }
     }
 
     @Test public void friendRequestsSeparateIncomingApprovalFromOutgoingCancellation() throws Exception {

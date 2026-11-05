@@ -26,6 +26,9 @@ final class WidgetPlot {
     }
 
     static Bitmap draw(JSONArray points, int width, int height, float progress) {
+        return draw(points, width, height, progress, Metric.HUNGER);
+    }
+    static Bitmap draw(JSONArray points, int width, int height, float progress, Metric metric) {
         width = Math.max(100, width);
         height = Math.max(50, height);
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
@@ -33,7 +36,7 @@ final class WidgetPlot {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setTextSize(10);
         paint.setColor(0x1469e8c0);
-        canvas.drawRoundRect(22, y(2, height), width - 16, y(4, height), 5, 5, paint);
+        if (metric == Metric.HUNGER) canvas.drawRoundRect(22, y(2, height), width - 16, y(4, height), 5, 5, paint);
         for (int i = 0; i < 6; i++) {
             float ordinate = y(i, height);
             paint.setColor(0xff283039);
@@ -47,7 +50,7 @@ final class WidgetPlot {
             canvas.drawText("오늘 첫 기록을 남겨보세요", 30, height / 2f, paint);
             return bitmap;
         }
-        double[] averages = History.averages(points);
+        double[] averages = History.averages(points, metric);
         float lastX = 0, lastY = 0, lastAverage = 0;
         for (int i = first; i < points.length(); i++) {
             if (i == points.length() - 1 && progress < 1) break;
@@ -57,7 +60,7 @@ final class WidgetPlot {
             paint.setStrokeWidth(1.8f);
             paint.setColor(MINT);
             if (i > first) {
-                if (py < lastY) {
+                if (metric == Metric.HUNGER && py < lastY) {
                     canvas.drawLine(lastX, lastY, px, lastY, paint);
                     canvas.drawLine(px, lastY, px, py, paint);
                 } else canvas.drawLine(lastX, lastY, px, py, paint);
@@ -91,10 +94,10 @@ final class WidgetPlot {
         int last = points.length() - 1;
         float destinationX = (compact ? 10 : 14) + x(points, first, last,
                 Math.max(100, compact ? width - 20 : Math.round((width - 28) * 1.65f / 2.65f)));
-        float destinationY = (compact ? 94 : 116) + y(points.optJSONArray(last).optDouble(1), height - (compact ? 268 : 346));
+        float destinationY = (compact ? 122 : 146) + y(points.optJSONArray(last).optDouble(1), height - (compact ? 356 : 448));
         if (progress < 1) {
-            float originX = (compact ? 10 : 14) + (width - (compact ? 20 : 28)) * (selected / 3 == 0 ? 0.25f : 0.75f);
-            float originY = height - (compact ? 136 : 164) + (selected % 3) * (compact ? 44 : 52);
+            float originX = width * 0.5f;
+            float originY = height - (compact ? 202 : 243) + selected * (compact ? 32 : 38);
             for (int tail = 9; tail >= 0; tail--) {
                 float t = Math.max(0, progress - tail * 0.027f);
                 float u = 1 - t;

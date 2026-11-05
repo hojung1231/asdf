@@ -25,8 +25,8 @@ android {
         applicationId 'com.hunger.log'
         minSdk 23
         targetSdk 35
-        versionCode 19
-        versionName '2.3.1'
+        versionCode 20
+        versionName '2.4'
     }
 }
 dependencies {

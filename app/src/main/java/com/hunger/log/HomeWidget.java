@@ -57,6 +57,13 @@ public class HomeWidget extends AppWidgetProvider {
 
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+        if ("com.hunger.log.METRIC".equals(intent.getAction())) {
+            animationId++; flying = false;
+            Metric metric = Metric.from(intent.getIntExtra("metric", 0));
+            metric.select(context);
+            refresh(context, metric.rule(), -1);
+            return;
+        }
         if (FRIEND_TICK.equals(intent.getAction())) {
             SocialSync.schedule(context);
             if (!flying) refresh(context, "HUGGY · 친구 소식 갱신", -1);
@@ -65,9 +72,11 @@ public class HomeWidget extends AppWidgetProvider {
         if ("com.hunger.log.RECORD".equals(intent.getAction())) {
             int value = intent.getIntExtra("value", -1);
             if (value >= 0 && value < BUTTONS.length) {
-                int before = History.read(context).length();
-                String status = History.record(context, value);
-                boolean saved = History.read(context).length() > before;
+                Metric metric = Metric.from(intent.getIntExtra("metric", 0));
+                metric.select(context);
+                int before = History.read(context, metric).length();
+                String status = History.record(context, metric, value);
+                boolean saved = History.read(context, metric).length() > before;
                 animate(context, status, value, saved, goAsync());
             }
         }
@@ -113,11 +122,18 @@ public class HomeWidget extends AppWidgetProvider {
             boolean compact = kind == 1;
             RemoteViews view = new RemoteViews(context.getPackageName(), compact ? R.layout.widget_compact : R.layout.widget);
             int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
+            Metric metric = Metric.selected(context);
+            int[] tabs = {R.id.metric0, R.id.metric1, R.id.metric2};
+            for (int i = 0; i < tabs.length; i++) {
+                view.setTextColor(tabs[i], i == metric.ordinal() ? 0xff69e8c0 : 0xffa6b0bb);
+                view.setOnClickPendingIntent(tabs[i], PendingIntent.getBroadcast(context, 200 + i,
+                        new Intent(context, HomeWidget.class).setAction("com.hunger.log.METRIC").putExtra("metric", i), flags));
+            }
             AppUpdates.Release update = AppUpdates.available(context);
             view.setViewVisibility(R.id.update, update == null ? android.view.View.GONE : android.view.View.VISIBLE);
             view.setOnClickPendingIntent(R.id.update, PendingIntent.getActivity(context, 30,
                     new Intent(context, UpdateActivity.class), flags));
-            org.json.JSONArray points = History.read(context);
+            org.json.JSONArray points = History.read(context, metric);
             org.json.JSONArray feed = SocialClient.cached(context).optJSONArray("feed");
             int[] messageIds = {R.id.friendMessage0, R.id.friendMessage1, R.id.friendMessage2};
             for (int i = 0; i < messageIds.length; i++) {
@@ -129,32 +145,34 @@ public class HomeWidget extends AppWidgetProvider {
                     new Intent(context, MainActivity.class).putExtra("tab", 1)
                             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP), flags));
             view.setContentDescription(R.id.friendPanel, "친구 소식. 함께 보기 열기");
-            view.setTextViewText(R.id.weight, WeightHistory.todayLabel(context));
-            view.setOnClickPendingIntent(R.id.weight, PendingIntent.getActivity(context, 20,
-                    new Intent(context, WeightActivity.class), flags));
-            view.setOnClickPendingIntent(R.id.score, PendingIntent.getActivity(context, 21,
-                    new Intent(context, DailyHistoryActivity.class), flags));
+            view.setTextViewText(R.id.weight, metric == Metric.HUNGER ? WeightHistory.todayLabel(context) : metric.rule() + "  ›");
+            view.setOnClickPendingIntent(R.id.weight, PendingIntent.getActivity(context, 300 + metric.ordinal(),
+                    new Intent(context, metric == Metric.HUNGER ? WeightActivity.class : DailyHistoryActivity.class).putExtra("metric", metric.ordinal()), flags));
+            view.setOnClickPendingIntent(R.id.score, PendingIntent.getActivity(context, 310 + metric.ordinal(),
+                    new Intent(context, DailyHistoryActivity.class).putExtra("metric", metric.ordinal()), flags));
             view.setTextViewText(R.id.status, status);
-            view.setTextViewText(R.id.score, History.scoreText(points));
-            view.setContentDescription(R.id.score, "현재 누적 평균 기준. 평균 2 이하는 100점, 4 이상은 0점. " + History.scoreText(points));
-            double[] averages = History.averages(points);
+            view.setTextViewText(R.id.score, metric.scoreText(points));
+            view.setContentDescription(R.id.score, metric.rule() + " · " + metric.scoreText(points));
+            double[] averages = History.averages(points, metric);
             view.setTextViewText(R.id.mean, points.length() == 0 ? "누적 평균" : "누적 평균" + (char) 10
                     + String.format(java.util.Locale.KOREA, "%.1f / 6", 6 - averages[averages.length - 1]));
             org.json.JSONArray last = points.optJSONArray(points.length() - 1);
             view.setTextViewText(R.id.current, last == null || last.optLong(0) < History.todayStart()
-                    ? "오늘 첫 기록" : "지금 나의 허기" + (char) 10 + History.LABELS[last.optInt(1)].substring(3));
+                    ? "오늘 첫 " + metric.title + " 기록" : "지금 " + metric.title + (char) 10 + metric.labels[last.optInt(1)].substring(3));
             view.setTextViewText(R.id.legend, android.text.Html.fromHtml(
-                    "<font color='#69e8c0'>━ 허기 기록</font>　<font color='#b59aff'>━ 누적 평균</font>　▪ 목표 구간"));
+                    metric.legend()));
             view.setOnClickPendingIntent(R.id.brand, PendingIntent.getActivity(context, 0,
                     new Intent(context, MainActivity.class), flags));
             view.setContentDescription(R.id.status, status + " · 그래프 열기");
             view.setOnClickPendingIntent(R.id.status, PendingIntent.getActivity(context, 0,
                     new Intent(context, MainActivity.class), flags));
             for (int i = 0; i < BUTTONS.length; i++) {
-                view.setTextViewText(BUTTONS[i], History.LABELS[i]);
+                view.setTextViewText(BUTTONS[i], metric.labels[i]);
+                view.setInt(BUTTONS[i], "setBackgroundResource", metric.background(i));
                 Intent click = new Intent(context, HomeWidget.class).setAction("com.hunger.log.RECORD");
                 click.putExtra("value", i);
-                view.setOnClickPendingIntent(BUTTONS[i], PendingIntent.getBroadcast(context, i, click, flags));
+                click.putExtra("metric", metric.ordinal());
+                view.setOnClickPendingIntent(BUTTONS[i], PendingIntent.getBroadcast(context, 1000 + metric.ordinal() * 6 + i, click, flags));
             }
             AppWidgetManager manager = AppWidgetManager.getInstance(context);
             int[] ids = manager.getAppWidgetIds(new ComponentName(context, compact ? CompactWidget.class : HomeWidget.class));
@@ -168,7 +186,7 @@ public class HomeWidget extends AppWidgetProvider {
                         : AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 350);
                 RemoteViews sized = view.clone();
                 sized.setImageViewBitmap(R.id.plot, WidgetPlot.draw(points, Math.max(100, compact ? width - 20 : Math.round((width - 28) * 1.65f / 2.65f)),
-                        Math.max(50, height - (compact ? 268 : 346)), progress));
+                        Math.max(50, height - (compact ? 356 : 448)), progress, metric));
                 sized.setImageViewBitmap(R.id.effect, WidgetPlot.effect(points, width, height, selected, progress, compact));
                 for (int i = 0; i < BUTTONS.length; i++) {
                     sized.setTextColor(BUTTONS[i], i == selected && (progress < 0.26f || progress == 2)
