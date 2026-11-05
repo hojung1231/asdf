@@ -103,7 +103,8 @@ final class RecordPane extends FrameLayout {
         ((TextView) findViewById(R.id.current)).setText(last == null || last.optLong(0) < History.todayStart()
                 ? "오늘 첫 " + metric.title + " 기록" : "지금 " + metric.title + (char) 10 + metric.labels[last.optInt(1)].substring(3));
         double[] means = History.averages(points, metric);
-        ((TextView) findViewById(R.id.mean)).setText(points.length() == 0 ? "누적 평균" : "누적 평균" + (char) 10
+        String meanTitle = metric == Metric.FOCUS ? "전체 평균" : "누적 평균";
+        ((TextView) findViewById(R.id.mean)).setText(points.length() == 0 ? meanTitle : meanTitle + (char) 10
                 + String.format(java.util.Locale.KOREA, "%.1f / 6", 6 - means[means.length - 1]));
         ((TextView) findViewById(R.id.score)).setText(metric.scoreText(points));
         findViewById(R.id.score).setContentDescription(metric.rule());

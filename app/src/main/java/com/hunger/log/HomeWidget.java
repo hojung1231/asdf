@@ -154,7 +154,8 @@ public class HomeWidget extends AppWidgetProvider {
             view.setTextViewText(R.id.score, metric.scoreText(points));
             view.setContentDescription(R.id.score, metric.rule() + " · " + metric.scoreText(points));
             double[] averages = History.averages(points, metric);
-            view.setTextViewText(R.id.mean, points.length() == 0 ? "누적 평균" : "누적 평균" + (char) 10
+            String meanTitle = metric == Metric.FOCUS ? "전체 평균" : "누적 평균";
+            view.setTextViewText(R.id.mean, points.length() == 0 ? meanTitle : meanTitle + (char) 10
                     + String.format(java.util.Locale.KOREA, "%.1f / 6", 6 - averages[averages.length - 1]));
             org.json.JSONArray last = points.optJSONArray(points.length() - 1);
             view.setTextViewText(R.id.current, last == null || last.optLong(0) < History.todayStart()

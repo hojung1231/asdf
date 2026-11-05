@@ -54,7 +54,7 @@ enum Metric {
         return title + "\n" + (score < 0 ? "😶 기록 없음" : History.face(score) + " " + score + "점");
     }
     String legend() {
-        return "<font color='#69e8c0'>━ " + title + " 기록</font>　<font color='#b59aff'>━ 누적 평균</font>"
+        return "<font color='#69e8c0'>━ " + title + " 기록</font>　<font color='#b59aff'>━ " + (this == FOCUS ? "전체 평균" : "누적 평균") + "</font>"
                 + (this == HUNGER ? "　▪ 목표 구간" : "");
     }
 }

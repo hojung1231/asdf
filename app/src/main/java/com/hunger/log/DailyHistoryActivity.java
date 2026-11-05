@@ -32,7 +32,7 @@ public class DailyHistoryActivity extends BaseActivity {
         layout.addView(heading);
         TextView rule = new TextView(this);
         rule.setText("매일 첫 기록~마지막 기록의 시간 평균 기준" + (char) 10 + (metric == Metric.STRESS
-                ? "일별 점수는 해당 날짜의 전체 기록 · 1=100점 / 6=0점" : metric.rule()));
+                ? "일별 점수는 해당 날짜의 전체 기록 · 1=100점 / 6=0점" : metric.rule().replace("오늘", "매일")));
 
         if (metric == Metric.HUNGER) rule.append((char) 10 + "날짜를 누르면 몸무게 입력·수정");
         layout.addView(rule);
