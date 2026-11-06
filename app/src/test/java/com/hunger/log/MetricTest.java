@@ -42,4 +42,17 @@ public class MetricTest {
         assertEquals(5, History.averages(points, Metric.HUNGER)[1], 0.0001);
         assertEquals(-1, Metric.STRESS.score(new JSONArray(), day));
     }
+    @Test public void sharedGraphUsesOneTimeAxisForAllThreeSeriesAndExcludesOlderDays() {
+        JSONArray[] series = {
+            new JSONArray().put(new JSONArray().put(day - 1).put(0)).put(new JSONArray().put(day + 1000).put(2)),
+            new JSONArray().put(new JSONArray().put(day + 5000).put(0)),
+            new JSONArray().put(new JSONArray().put(day + 3000).put(4))
+        };
+        long[] range = WidgetPlot.range(series);
+        assertEquals(day + 1000, range[0]);
+        assertEquals(day + 5000, range[1]);
+        assertEquals(22, WidgetPlot.x(day + 1000, range, 300), .001);
+        assertEquals(153, WidgetPlot.x(day + 3000, range, 300), .001);
+        assertEquals(284, WidgetPlot.x(day + 5000, range, 300), .001);
+    }
 }
